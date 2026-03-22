@@ -1,21 +1,29 @@
-/**
- * Database Service
+﻿/**
+ * Database Service — Supabase Edition
  *
- * Single source of truth for all data access.
- * Uses JSON file storage (mock backend style).
- * Models align with shared Flutter app contract.
+ * Drop-in replacement for the JSON file-based db.ts.
+ * All function signatures are identical — no other file needs to change.
+ * Uses SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from Vercel environment.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import type { TrainingSubject, TrainingModule, TrainingMaterial, EmployeeSubjectAssignment, AssessmentQuestion, AssessmentAttempt, ModuleAssessmentSettings } from './models';
+import { createClient } from '@supabase/supabase-js';
+import type {
+  TrainingSubject,
+  TrainingModule,
+  TrainingMaterial,
+  EmployeeSubjectAssignment,
+  AssessmentQuestion,
+  AssessmentAttempt,
+  ModuleAssessmentSettings,
+} from './models';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'db.json');
+// ─── Supabase client (service role — full access, server-side only) ──────────
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-// ============================================
-// ADMIN-SPECIFIC TYPES (not in shared contract)
-// ============================================
-
+// ─── ADMIN-SPECIFIC TYPES ────────────────────────────────────────────────────
 export interface User {
   id: string;
   name: string;
@@ -25,169 +33,75 @@ export interface User {
   status: 'Active' | 'Inactive';
   progress: number;
   avatar?: string;
-  /** Auto-generated login password stored in plain text for admin visibility. */
   password?: string;
-  /** Primary mobile / phone number */
   mobileNumber?: string;
-  /** Secondary / additional mobile number */
   additionalMobileNumber?: string;
 }
 
 export interface Settings {
   general: {
-    organizationName: string
-    logo: string | null
-    primaryColor: string
-    secondaryColor: string
-    accentColor: string
-    timezone: string
-    dateFormat: string
-    timeFormat: '12h' | '24h'
-    language: string
-    currency: string
+    organizationName: string;
+    logo: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    timezone: string;
+    dateFormat: string;
+    timeFormat: '12h' | '24h';
+    language: string;
+    currency: string;
     trainingDefaults: {
-      defaultDuration: number
-      defaultModuleDuration: number
-      autoEnrollNewEmployees: boolean
-      autoGenerateCertificates: boolean
-      reminderFrequency: 'daily' | 'weekly' | 'biweekly'
-      gracePeriod: number
-      minPassingScore: number
-      allowRetakes: boolean
-      maxRetakeAttempts: number
-    }
-  }
+      defaultDuration: number;
+      defaultModuleDuration: number;
+      autoEnrollNewEmployees: boolean;
+      autoGenerateCertificates: boolean;
+      reminderFrequency: 'daily' | 'weekly' | 'biweekly';
+      gracePeriod: number;
+      minPassingScore: number;
+      allowRetakes: boolean;
+      maxRetakeAttempts: number;
+    };
+  };
   mobileApp: {
-    appName: string
-    appVersion: string
-    minimumSupportedVersion: string
-    forceUpdate: boolean
-    maintenanceMode: boolean
-    maintenanceMessage: string
+    appName: string;
+    appVersion: string;
+    minimumSupportedVersion: string;
+    forceUpdate: boolean;
+    maintenanceMode: boolean;
+    maintenanceMessage: string;
     features: {
-      offlineMode: boolean
-      darkMode: boolean
-      biometricAuth: boolean
-      pushNotifications: boolean
-      videoStreaming: boolean
-      downloadContent: boolean
-    }
+      offlineMode: boolean;
+      darkMode: boolean;
+      biometricAuth: boolean;
+      pushNotifications: boolean;
+      videoStreaming: boolean;
+      downloadContent: boolean;
+    };
     theme: {
-      primaryColor: string
-      secondaryColor: string
-      accentColor: string
-    }
-  }
-  notifications: {
-    email: {
-      trainingAssignment: boolean
-      deadlineReminders: boolean
-      deadlineReminderDays: number[]
-      completionNotifications: boolean
-      welcomeEmail: boolean
-      weeklyReports: boolean
-      weeklyReportDay: string
-      monthlyReports: boolean
-    }
-    inApp: {
-      trainingUpdates: boolean
-      comments: boolean
-      announcements: boolean
-      achievements: boolean
-    }
-    recipients: {
-      adminEmail: string
-      ccEmails: string[]
-    }
-  }
-  security: {
-    passwordPolicy: {
-      minLength: number
-      requireUppercase: boolean
-      requireNumbers: boolean
-      requireSpecialChars: boolean
-      expiryDays: number
-      historyCount: number
-    }
-    session: {
-      timeout: number
-      rememberMeDuration: number
-      maxConcurrentSessions: number
-      forceLogoutOnPasswordChange: boolean
-    }
-    twoFactor: {
-      enabledForAll: boolean
-      requiredForAdmins: boolean
-      method: 'app' | 'sms' | 'email'
-    }
-    accessControl: {
-      ipWhitelist: string[]
-      loginAttemptLimit: number
-      lockoutDuration: number
-      allowMultipleDevices: boolean
-    }
-    audit: {
-      enableLogs: boolean
-      retentionDays: number
-    }
-  }
-  integrations: {
-    email: {
-      provider: string
-      config: Record<string, any>
-      fromEmail: string
-      fromName: string
-    }
-    sso: {
-      enabled: boolean
-      provider: string
-      clientId: string
-      clientSecret: string
-    }
-    api: {
-      enabled: boolean
-      key: string
-      rateLimit: number
-      webhookUrl: string
-      webhookEvents: string[]
-    }
-    calendar: {
-      google: boolean
-      outlook: boolean
-      syncSchedules: boolean
-    }
-  }
-  system: {
-    backup: {
-      enabled: boolean
-      frequency: 'daily' | 'weekly' | 'monthly'
-      time: string
-      lastBackup: string | null
-    }
-    dataRetention: number
-    maintenanceMode: boolean
-    debugMode: boolean
-    errorLoggingLevel: string
-  }
+      primaryColor: string;
+      secondaryColor: string;
+      accentColor: string;
+    };
+  };
+  notifications: any;
+  security: any;
+  integrations: any;
+  system: any;
 }
 
 export interface Role {
-  id: string
-  name: string
-  description: string
+  id: string;
+  name: string;
+  description: string;
   permissions: {
-    dashboard: string[]
-    users: string[]
-    training: string[]
-    schedule: string[]
-    notifications: string[]
-    settings: string[]
-  }
+    dashboard: string[];
+    users: string[];
+    training: string[];
+    schedule: string[];
+    notifications: string[];
+    settings: string[];
+  };
 }
-
-// ============================================
-// DATABASE SCHEMA
-// ============================================
 
 export interface Schema {
   users: User[];
@@ -203,692 +117,506 @@ export interface Schema {
   roles: Role[];
 }
 
-// ============================================
-// DEFAULT DATA
-// ============================================
+// ─── HELPER: map DB row snake_case → camelCase ───────────────────────────────
 
-const defaultSettings: Settings = {
-  general: {
-    organizationName: "Acme Corp Training",
-    logo: null,
-    primaryColor: "#3b82f6",
-    secondaryColor: "#1e293b",
-    accentColor: "#f59e0b",
-    timezone: "UTC",
-    dateFormat: "MM/DD/YYYY",
-    timeFormat: "12h",
-    language: "English",
-    currency: "USD",
-    trainingDefaults: {
-      defaultDuration: 4,
-      defaultModuleDuration: 1,
-      autoEnrollNewEmployees: true,
-      autoGenerateCertificates: true,
-      reminderFrequency: "weekly",
-      gracePeriod: 7,
-      minPassingScore: 70,
-      allowRetakes: true,
-      maxRetakeAttempts: 3
-    }
-  },
-  mobileApp: {
-    appName: "Acme Learning",
-    appVersion: "1.0.0",
-    minimumSupportedVersion: "1.0.0",
-    forceUpdate: false,
-    maintenanceMode: false,
-    maintenanceMessage: "The mobile app is currently undergoing scheduled maintenance.",
-    features: {
-      offlineMode: true,
-      darkMode: true,
-      biometricAuth: true,
-      pushNotifications: true,
-      videoStreaming: true,
-      downloadContent: true
-    },
-    theme: {
-      primaryColor: "#3b82f6",
-      secondaryColor: "#1e293b",
-      accentColor: "#f59e0b"
-    }
-  },
-  notifications: {
-    email: {
-      trainingAssignment: true,
-      deadlineReminders: true,
-      deadlineReminderDays: [7, 3, 1],
-      completionNotifications: true,
-      welcomeEmail: true,
-      weeklyReports: true,
-      weeklyReportDay: "Monday",
-      monthlyReports: true
-    },
-    inApp: {
-      trainingUpdates: true,
-      comments: true,
-      announcements: true,
-      achievements: true
-    },
-    recipients: {
-      adminEmail: "admin@acme-corp.com",
-      ccEmails: []
-    }
-  },
-  security: {
-    passwordPolicy: {
-      minLength: 8,
-      requireUppercase: true,
-      requireNumbers: true,
-      requireSpecialChars: true,
-      expiryDays: 90,
-      historyCount: 5
-    },
-    session: {
-      timeout: 30,
-      rememberMeDuration: 30,
-      maxConcurrentSessions: 3,
-      forceLogoutOnPasswordChange: true
-    },
-    twoFactor: {
-      enabledForAll: false,
-      requiredForAdmins: true,
-      method: "app"
-    },
-    accessControl: {
-      ipWhitelist: [],
-      loginAttemptLimit: 5,
-      lockoutDuration: 15,
-      allowMultipleDevices: true
-    },
-    audit: {
-      enableLogs: true,
-      retentionDays: 90
-    }
-  },
-  integrations: {
-    email: {
-      provider: "SMTP",
-      config: {},
-      fromEmail: "training@acme-corp.com",
-      fromName: "Acme Training"
-    },
-    sso: {
-      enabled: false,
-      provider: "Google",
-      clientId: "",
-      clientSecret: ""
-    },
-    api: {
-      enabled: true,
-      key: "atp_" + Math.random().toString(36).substring(2, 15),
-      rateLimit: 1000,
-      webhookUrl: "",
-      webhookEvents: ["user.created", "training.assigned"]
-    },
-    calendar: {
-      google: false,
-      outlook: false,
-      syncSchedules: true
-    }
-  },
-  system: {
-    backup: {
-      enabled: true,
-      frequency: "daily",
-      time: "02:00",
-      lastBackup: null
-    },
-    dataRetention: 24,
-    maintenanceMode: false,
-    debugMode: false,
-    errorLoggingLevel: "Errors Only"
-  }
-};
-
-const defaultRoles: Role[] = [
-  {
-    id: "admin",
-    name: "Admin",
-    description: "Full system access",
-    permissions: {
-      dashboard: ["view", "analytics", "export"],
-      users: ["view", "create", "edit", "delete", "roles", "passwords"],
-      training: ["view", "create", "edit", "delete", "assign", "track", "grade"],
-      schedule: ["view", "create", "edit", "delete"],
-      notifications: ["send", "manage"],
-      settings: ["view", "modify", "integrations"]
-    }
-  },
-  {
-    id: "trainer",
-    name: "Trainer",
-    description: "Training and content management",
-    permissions: {
-      dashboard: ["view", "analytics"],
-      users: ["view"],
-      training: ["view", "create", "edit", "delete", "assign", "track", "grade"],
-      schedule: ["view", "create", "edit", "delete"],
-      notifications: ["send"],
-      settings: ["view"]
-    }
-  },
-  {
-    id: "employee",
-    name: "Employee",
-    description: "Standard learning access",
-    permissions: {
-      dashboard: ["view"],
-      users: [],
-      training: ["view", "track"],
-      schedule: ["view"],
-      notifications: [],
-      settings: []
-    }
-  }
-];
-
-const initialData: Schema = {
-  users: [],
-  trainingSubjects: [],
-  trainingModules: [],
-  trainingMaterials: [],
-  employeeSubjectAssignments: [],
-  assessmentQuestions: [],
-  assessmentAttempts: [],
-  moduleAssessmentSettings: [],
-  notifications: [],
-  settings: defaultSettings,
-  roles: defaultRoles
-};
-
-// ============================================
-// DATABASE OPERATIONS
-// ============================================
-
-async function ensureDb() {
-  try {
-    const dir = path.dirname(DB_PATH);
-    await fs.mkdir(dir, { recursive: true });
-
-    try {
-      await fs.access(DB_PATH);
-    } catch {
-      await fs.writeFile(DB_PATH, JSON.stringify(initialData, null, 2));
-    }
-  } catch (error) {
-    console.error('Database initialization failed:', error);
-  }
+function mapUser(row: any): User {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    department: row.department,
+    status: row.status,
+    progress: row.progress ?? 0,
+    avatar: row.avatar,
+    password: row.password,
+    mobileNumber: row.mobile_number,
+    additionalMobileNumber: row.additional_mobile_number,
+  };
 }
 
-async function readDb(): Promise<Schema> {
-  await ensureDb();
-  const data = await fs.readFile(DB_PATH, 'utf-8');
-  const parsed = JSON.parse(data);
-
-  // Backward-compat: support old db.json that used 'trainingPrograms' key
-  if (!parsed.trainingSubjects && parsed.trainingPrograms) {
-    parsed.trainingSubjects = parsed.trainingPrograms;
-    delete parsed.trainingPrograms;
-  }
-  if (!parsed.trainingSubjects) {
-    parsed.trainingSubjects = [];
-  }
-
-  // Backward-compat: ensure trainingModules array exists
-  if (!parsed.trainingModules) {
-    parsed.trainingModules = [];
-  }
-
-  // Backward-compat: ensure trainingMaterials array exists
-  if (!parsed.trainingMaterials) {
-    parsed.trainingMaterials = [];
-  }
-
-  // Backward-compat: ensure employeeSubjectAssignments array exists
-  if (!parsed.employeeSubjectAssignments) {
-    parsed.employeeSubjectAssignments = [];
-  }
-
-  // Backward-compat: ensure assessment collections exist
-  if (!parsed.assessmentQuestions) parsed.assessmentQuestions = [];
-  if (!parsed.assessmentAttempts) parsed.assessmentAttempts = [];
-  if (!parsed.moduleAssessmentSettings) parsed.moduleAssessmentSettings = [];
-
-  // Backward-compat: ensure mode field exists on all subjects
-  parsed.trainingSubjects = parsed.trainingSubjects.map((p: any) => ({
-    mode: 'sequential',
-    ...p,
-  }));
-
-  // Backward-compat: support old modules that used 'programId' key
-  // Also migrate old modules that had title/type/mediaUrl embedded —
-  // extract those fields into new TrainingMaterial records.
-  const migratedMaterials: TrainingMaterial[] = [...parsed.trainingMaterials];
-  const existingMaterialModuleIds = new Set(migratedMaterials.map((mat: any) => mat.moduleId));
-
-  parsed.trainingModules = parsed.trainingModules.map((m: any) => {
-    const moduleId = m.programId ? m.programId : m.id;
-    const subjectId = m.programId ?? m.subjectId;
-
-    // If this module had embedded media AND we haven't already migrated it
-    if (m.title && m.type && m.mediaUrl && !existingMaterialModuleIds.has(m.id)) {
-      migratedMaterials.push({
-        id: `mat-${m.id}`,
-        moduleId: m.id,
-        title: m.title,
-        type: m.type,
-        mediaUrl: m.mediaUrl,
-      });
-      existingMaterialModuleIds.add(m.id);
-    }
-
-    // Return clean module (strip legacy media fields)
-    const { title, type, mediaUrl, order, programId, ...cleanModule } = m;
-    return {
-      gapValue: 0,
-      gapUnit: 'days',
-      ...cleanModule,
-      id: m.id,
-      subjectId,
-    };
-  });
-
-  parsed.trainingMaterials = migratedMaterials;
-
-  return parsed;
+function mapSubject(row: any): TrainingSubject {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? '',
+    duration: row.duration,
+    mode: row.mode ?? 'sequential',
+    assignedTrainerIds: row.assigned_trainer_ids ?? [],
+  };
 }
 
-async function writeDb(data: Schema) {
-  await ensureDb();
-  await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
+function mapModule(row: any): TrainingModule {
+  return {
+    id: row.id,
+    subjectId: row.subject_id,
+    day: row.day,
+    gapValue: row.gap_value ?? 0,
+    gapUnit: row.gap_unit ?? 'days',
+  };
 }
 
-// ============================================
-// EXPORTED DATABASE API
-// ============================================
+function mapMaterial(row: any): TrainingMaterial {
+  return {
+    id: row.id,
+    moduleId: row.module_id,
+    title: row.title,
+    type: row.type,
+    mediaUrl: row.media_url,
+  };
+}
+
+function mapAssignment(row: any): EmployeeSubjectAssignment {
+  return {
+    id: row.id,
+    employeeId: row.employee_id,
+    subjectId: row.subject_id,
+    assignedAt: row.assigned_at,
+    status: row.status,
+  };
+}
+
+function mapQuestion(row: any): AssessmentQuestion {
+  return {
+    id: row.id,
+    moduleId: row.module_id,
+    text: row.text,
+    optionA: row.option_a,
+    optionB: row.option_b,
+    optionC: row.option_c,
+    optionD: row.option_d,
+    correctAnswer: row.correct_answer,
+    explanation: row.explanation,
+    createdAt: row.created_at,
+  };
+}
+
+function mapAttempt(row: any): AssessmentAttempt {
+  return {
+    id: row.id,
+    employeeId: row.employee_id,
+    subjectId: row.subject_id,
+    moduleId: row.module_id,
+    attemptNumber: row.attempt_number,
+    score: row.score,
+    passed: row.passed,
+    submittedAt: row.submitted_at,
+    answers: row.answers ?? {},
+  };
+}
+
+function mapSettings(row: any): Settings {
+  return row.data as Settings;
+}
+
+// ─── EXPORTED DATABASE API ───────────────────────────────────────────────────
 
 export const db = {
-  read: readDb,
-  write: writeDb,
 
-  // ----------------------------------------
-  // USERS
-  // ----------------------------------------
+  // ── USERS ──────────────────────────────────────────────────────────────────
   users: {
-    async findAll() {
-      const data = await readDb();
-      return data.users;
+    async findAll(): Promise<User[]> {
+      const { data, error } = await supabase.from('users').select('*');
+      if (error) throw error;
+      return (data ?? []).map(mapUser);
     },
-    async findById(id: string) {
-      const data = await readDb();
-      return data.users.find(u => u.id === id) || null;
+    async findById(id: string): Promise<User | null> {
+      const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+      if (error) return null;
+      return mapUser(data);
     },
-    async create(user: User) {
-      const data = await readDb();
-      data.users.push(user);
-      await writeDb(data);
-      return user;
+    async create(user: User): Promise<User> {
+      const { data, error } = await supabase.from('users').insert({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        status: user.status,
+        progress: user.progress,
+        avatar: user.avatar,
+        password: user.password,
+        mobile_number: user.mobileNumber,
+        additional_mobile_number: user.additionalMobileNumber,
+      }).select().single();
+      if (error) throw error;
+      return mapUser(data);
     },
-    async update(id: string, updates: Partial<User>) {
-      const data = await readDb();
-      const index = data.users.findIndex(u => u.id === id);
-      if (index === -1) return null;
-
-      data.users[index] = { ...data.users[index], ...updates };
-      await writeDb(data);
-      return data.users[index];
+    async update(id: string, updates: Partial<User>): Promise<User | null> {
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.email !== undefined) dbUpdates.email = updates.email;
+      if (updates.role !== undefined) dbUpdates.role = updates.role;
+      if (updates.department !== undefined) dbUpdates.department = updates.department;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.progress !== undefined) dbUpdates.progress = updates.progress;
+      if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
+      if (updates.password !== undefined) dbUpdates.password = updates.password;
+      if (updates.mobileNumber !== undefined) dbUpdates.mobile_number = updates.mobileNumber;
+      if (updates.additionalMobileNumber !== undefined) dbUpdates.additional_mobile_number = updates.additionalMobileNumber;
+      const { data, error } = await supabase.from('users').update(dbUpdates).eq('id', id).select().single();
+      if (error) return null;
+      return mapUser(data);
     },
-    async delete(id: string) {
-      const data = await readDb();
-      data.users = data.users.filter(u => u.id !== id);
-      await writeDb(data);
-      return true;
-    }
+    async delete(id: string): Promise<boolean> {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      return !error;
+    },
   },
 
-  // ----------------------------------------
-  // TRAINING SUBJECTS (shared contract)
-  // ----------------------------------------
+  // ── TRAINING SUBJECTS ──────────────────────────────────────────────────────
   subjects: {
     async findAll(): Promise<TrainingSubject[]> {
-      const data = await readDb();
-      return data.trainingSubjects;
+      const { data, error } = await supabase.from('training_subjects').select('*');
+      if (error) throw error;
+      return (data ?? []).map(mapSubject);
     },
     async findById(id: string): Promise<TrainingSubject | null> {
-      const data = await readDb();
-      return data.trainingSubjects.find(p => p.id === id) || null;
+      const { data, error } = await supabase.from('training_subjects').select('*').eq('id', id).single();
+      if (error) return null;
+      return mapSubject(data);
     },
     async create(subject: TrainingSubject): Promise<TrainingSubject> {
-      const data = await readDb();
-      data.trainingSubjects.push(subject);
-      await writeDb(data);
-      return subject;
+      const { data, error } = await supabase.from('training_subjects').insert({
+        id: subject.id,
+        name: subject.name,
+        description: subject.description,
+        duration: subject.duration,
+        mode: subject.mode,
+        assigned_trainer_ids: subject.assignedTrainerIds,
+      }).select().single();
+      if (error) throw error;
+      return mapSubject(data);
     },
     async update(id: string, updates: Partial<TrainingSubject>): Promise<TrainingSubject | null> {
-      const data = await readDb();
-      const index = data.trainingSubjects.findIndex(p => p.id === id);
-      if (index === -1) return null;
-
-      data.trainingSubjects[index] = { ...data.trainingSubjects[index], ...updates };
-      await writeDb(data);
-      return data.trainingSubjects[index];
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.duration !== undefined) dbUpdates.duration = updates.duration;
+      if (updates.mode !== undefined) dbUpdates.mode = updates.mode;
+      if (updates.assignedTrainerIds !== undefined) dbUpdates.assigned_trainer_ids = updates.assignedTrainerIds;
+      const { data, error } = await supabase.from('training_subjects').update(dbUpdates).eq('id', id).select().single();
+      if (error) return null;
+      return mapSubject(data);
     },
     async delete(id: string): Promise<boolean> {
-      const data = await readDb();
-      // Find all modules for this subject
-      const moduleIds = data.trainingModules
-        .filter(m => m.subjectId === id)
-        .map(m => m.id);
-
-      data.trainingSubjects = data.trainingSubjects.filter(p => p.id !== id);
-      data.trainingModules = data.trainingModules.filter(m => m.subjectId !== id);
-      // Cascade delete materials for those modules
-      data.trainingMaterials = data.trainingMaterials.filter(
-        mat => !moduleIds.includes(mat.moduleId)
-      );
-      await writeDb(data);
-      return true;
-    }
+      const { error } = await supabase.from('training_subjects').delete().eq('id', id);
+      return !error;
+    },
   },
 
-  // ----------------------------------------
-  // TRAINING MODULES (shared contract)
-  // ----------------------------------------
+  // ── TRAINING MODULES ───────────────────────────────────────────────────────
   modules: {
     async findAll(): Promise<TrainingModule[]> {
-      const data = await readDb();
-      return data.trainingModules;
+      const { data, error } = await supabase.from('training_modules').select('*');
+      if (error) throw error;
+      return (data ?? []).map(mapModule);
     },
     async findBySubjectId(subjectId: string): Promise<TrainingModule[]> {
-      const data = await readDb();
-      return data.trainingModules.filter(m => m.subjectId === subjectId);
+      const { data, error } = await supabase.from('training_modules').select('*').eq('subject_id', subjectId).order('day');
+      if (error) throw error;
+      return (data ?? []).map(mapModule);
     },
     async findById(id: string): Promise<TrainingModule | null> {
-      const data = await readDb();
-      return data.trainingModules.find(m => m.id === id) || null;
+      const { data, error } = await supabase.from('training_modules').select('*').eq('id', id).single();
+      if (error) return null;
+      return mapModule(data);
     },
     async create(module: TrainingModule): Promise<TrainingModule> {
-      const data = await readDb();
-      data.trainingModules.push(module);
-      await writeDb(data);
-      return module;
+      const { data, error } = await supabase.from('training_modules').insert({
+        id: module.id,
+        subject_id: module.subjectId,
+        day: module.day,
+        gap_value: module.gapValue,
+        gap_unit: module.gapUnit,
+      }).select().single();
+      if (error) throw error;
+      return mapModule(data);
     },
     async update(id: string, updates: Partial<TrainingModule>): Promise<TrainingModule | null> {
-      const data = await readDb();
-      const index = data.trainingModules.findIndex(m => m.id === id);
-      if (index === -1) return null;
-
-      data.trainingModules[index] = { ...data.trainingModules[index], ...updates };
-      await writeDb(data);
-      return data.trainingModules[index];
+      const dbUpdates: any = {};
+      if (updates.day !== undefined) dbUpdates.day = updates.day;
+      if (updates.gapValue !== undefined) dbUpdates.gap_value = updates.gapValue;
+      if (updates.gapUnit !== undefined) dbUpdates.gap_unit = updates.gapUnit;
+      const { data, error } = await supabase.from('training_modules').update(dbUpdates).eq('id', id).select().single();
+      if (error) return null;
+      return mapModule(data);
     },
     async delete(id: string): Promise<boolean> {
-      const data = await readDb();
-      data.trainingModules = data.trainingModules.filter(m => m.id !== id);
-      // Cascade delete materials
-      data.trainingMaterials = data.trainingMaterials.filter(mat => mat.moduleId !== id);
-      await writeDb(data);
-      return true;
-    }
+      const { error } = await supabase.from('training_modules').delete().eq('id', id);
+      return !error;
+    },
   },
 
-  // ----------------------------------------
-  // TRAINING MATERIALS
-  // ----------------------------------------
+  // ── TRAINING MATERIALS ─────────────────────────────────────────────────────
   materials: {
     async findAll(): Promise<TrainingMaterial[]> {
-      const data = await readDb();
-      return data.trainingMaterials;
+      const { data, error } = await supabase.from('training_materials').select('*');
+      if (error) throw error;
+      return (data ?? []).map(mapMaterial);
     },
     async findByModuleId(moduleId: string): Promise<TrainingMaterial[]> {
-      const data = await readDb();
-      return data.trainingMaterials.filter(mat => mat.moduleId === moduleId);
+      const { data, error } = await supabase.from('training_materials').select('*').eq('module_id', moduleId);
+      if (error) throw error;
+      return (data ?? []).map(mapMaterial);
     },
     async findById(id: string): Promise<TrainingMaterial | null> {
-      const data = await readDb();
-      return data.trainingMaterials.find(mat => mat.id === id) || null;
+      const { data, error } = await supabase.from('training_materials').select('*').eq('id', id).single();
+      if (error) return null;
+      return mapMaterial(data);
     },
     async create(material: TrainingMaterial): Promise<TrainingMaterial> {
-      const data = await readDb();
-      data.trainingMaterials.push(material);
-      await writeDb(data);
-      return material;
+      const { data, error } = await supabase.from('training_materials').insert({
+        id: material.id,
+        module_id: material.moduleId,
+        title: material.title,
+        type: material.type,
+        media_url: material.mediaUrl,
+      }).select().single();
+      if (error) throw error;
+      return mapMaterial(data);
     },
     async update(id: string, updates: Partial<TrainingMaterial>): Promise<TrainingMaterial | null> {
-      const data = await readDb();
-      const index = data.trainingMaterials.findIndex(mat => mat.id === id);
-      if (index === -1) return null;
-
-      data.trainingMaterials[index] = { ...data.trainingMaterials[index], ...updates };
-      await writeDb(data);
-      return data.trainingMaterials[index];
+      const dbUpdates: any = {};
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.type !== undefined) dbUpdates.type = updates.type;
+      if (updates.mediaUrl !== undefined) dbUpdates.media_url = updates.mediaUrl;
+      const { data, error } = await supabase.from('training_materials').update(dbUpdates).eq('id', id).select().single();
+      if (error) return null;
+      return mapMaterial(data);
     },
     async delete(id: string): Promise<boolean> {
-      const data = await readDb();
-      data.trainingMaterials = data.trainingMaterials.filter(mat => mat.id !== id);
-      await writeDb(data);
-      return true;
-    }
+      const { error } = await supabase.from('training_materials').delete().eq('id', id);
+      return !error;
+    },
   },
 
-  // ----------------------------------------
-  // SETTINGS
-  // ----------------------------------------
+  // ── SETTINGS ───────────────────────────────────────────────────────────────
   settings: {
-    async find() {
-      const data = await readDb();
-      return data.settings;
+    async find(): Promise<Settings> {
+      const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+      if (error) throw error;
+      return mapSettings(data);
     },
-    async update(updates: Partial<Settings>) {
-      const data = await readDb();
-      if (updates.general) data.settings.general = { ...data.settings.general, ...updates.general };
-      if (updates.notifications) data.settings.notifications = { ...data.settings.notifications, ...updates.notifications };
-      if (updates.security) data.settings.security = { ...data.settings.security, ...updates.security };
-      if (updates.integrations) data.settings.integrations = { ...data.settings.integrations, ...updates.integrations };
-      if (updates.system) data.settings.system = { ...data.settings.system, ...updates.system };
-
-      await writeDb(data);
-      return data.settings;
-    }
+    async update(updates: Partial<Settings>): Promise<Settings> {
+      const current = await db.settings.find();
+      const merged = {
+        ...current,
+        ...updates,
+        general: { ...current.general, ...(updates.general ?? {}) },
+        mobileApp: { ...current.mobileApp, ...(updates.mobileApp ?? {}) },
+      };
+      const { data, error } = await supabase.from('settings').update({ data: merged }).eq('id', 1).select().single();
+      if (error) throw error;
+      return mapSettings(data);
+    },
   },
 
-  // ----------------------------------------
-  // ROLES
-  // ----------------------------------------
+  // ── ROLES ──────────────────────────────────────────────────────────────────
   roles: {
-    async findAll() {
-      const data = await readDb();
-      return data.roles;
+    async findAll(): Promise<Role[]> {
+      const { data, error } = await supabase.from('roles').select('*');
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        permissions: r.permissions,
+      }));
     },
-    async update(id: string, updates: Partial<Role>) {
-      const data = await readDb();
-      const index = data.roles.findIndex(r => r.id === id);
-      if (index === -1) return null;
-
-      data.roles[index] = { ...data.roles[index], ...updates };
-      await writeDb(data);
-      return data.roles[index];
+    async update(id: string, updates: Partial<Role>): Promise<Role | null> {
+      const { data, error } = await supabase.from('roles').update(updates).eq('id', id).select().single();
+      if (error) return null;
+      return data;
     },
-    async create(role: Role) {
-      const data = await readDb();
-      data.roles.push(role);
-      await writeDb(data);
-      return role;
-    }
+    async create(role: Role): Promise<Role> {
+      const { data, error } = await supabase.from('roles').insert(role).select().single();
+      if (error) throw error;
+      return data;
+    },
   },
 
-  // ----------------------------------------
-  // LEGACY: training (for backwards compatibility with analytics route)
-  // ----------------------------------------
+  // ── LEGACY ─────────────────────────────────────────────────────────────────
   training: {
-    async findAll() {
-      const data = await readDb();
-      return data.trainingSubjects;
-    }
+    async findAll(): Promise<TrainingSubject[]> {
+      return db.subjects.findAll();
+    },
   },
 
-  // ----------------------------------------
-  // EMPLOYEE–SUBJECT ASSIGNMENTS
-  // ----------------------------------------
+  // ── EMPLOYEE-SUBJECT ASSIGNMENTS ───────────────────────────────────────────
   assignments: {
     async getByEmployee(employeeId: string): Promise<EmployeeSubjectAssignment[]> {
-      const data = await readDb();
-      return data.employeeSubjectAssignments.filter(a => a.employeeId === employeeId);
+      const { data, error } = await supabase.from('employee_subject_assignments').select('*').eq('employee_id', employeeId);
+      if (error) throw error;
+      return (data ?? []).map(mapAssignment);
     },
-
     async getBySubject(subjectId: string): Promise<EmployeeSubjectAssignment[]> {
-      const data = await readDb();
-      return data.employeeSubjectAssignments.filter(a => a.subjectId === subjectId);
+      const { data, error } = await supabase.from('employee_subject_assignments').select('*').eq('subject_id', subjectId);
+      if (error) throw error;
+      return (data ?? []).map(mapAssignment);
     },
-
     async assign(employeeId: string, subjectId: string): Promise<EmployeeSubjectAssignment> {
-      const data = await readDb();
       const now = new Date().toISOString();
-
-      // Find the most-recent existing assignment for this employee+subject pair
-      const existing = data.employeeSubjectAssignments.find(
-        a => a.employeeId === employeeId && a.subjectId === subjectId
-      );
+      const { data: existing } = await supabase
+        .from('employee_subject_assignments')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('subject_id', subjectId)
+        .single();
 
       if (existing) {
-        if (existing.status === 'active') {
-          // Already active — return as-is, no duplicate
-          return existing;
-        }
-
-        if (existing.status === 'paused') {
-          // Re-activate: update status + assignedAt timestamp
-          const idx = data.employeeSubjectAssignments.findIndex(a => a.id === existing.id);
-          data.employeeSubjectAssignments[idx] = {
-            ...existing,
-            status: 'active',
-            assignedAt: now,
-          };
-          await writeDb(data);
-          return data.employeeSubjectAssignments[idx];
-        }
-
-        // status === 'completed' → retake: fall through to create a fresh record
+        if (existing.status === 'active') return mapAssignment(existing);
+        const { data, error } = await supabase
+          .from('employee_subject_assignments')
+          .update({ status: 'active', assigned_at: now })
+          .eq('id', existing.id)
+          .select().single();
+        if (error) throw error;
+        return mapAssignment(data);
       }
 
-      // Create a new assignment record
-      const newAssignment: EmployeeSubjectAssignment = {
+      const newAssignment = {
         id: `esa-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        employeeId,
-        subjectId,
-        assignedAt: now,
+        employee_id: employeeId,
+        subject_id: subjectId,
+        assigned_at: now,
         status: 'active',
       };
-      data.employeeSubjectAssignments.push(newAssignment);
-      await writeDb(data);
-      return newAssignment;
+      const { data, error } = await supabase
+        .from('employee_subject_assignments')
+        .insert(newAssignment).select().single();
+      if (error) throw error;
+      return mapAssignment(data);
     },
-
-    async updateStatus(
-      id: string,
-      status: EmployeeSubjectAssignment['status']
-    ): Promise<EmployeeSubjectAssignment | null> {
-      const data = await readDb();
-      const idx = data.employeeSubjectAssignments.findIndex(a => a.id === id);
-      if (idx === -1) return null;
-
-      data.employeeSubjectAssignments[idx] = {
-        ...data.employeeSubjectAssignments[idx],
-        status,
-      };
-      await writeDb(data);
-      return data.employeeSubjectAssignments[idx];
+    async updateStatus(id: string, status: EmployeeSubjectAssignment['status']): Promise<EmployeeSubjectAssignment | null> {
+      const { data, error } = await supabase
+        .from('employee_subject_assignments')
+        .update({ status })
+        .eq('id', id).select().single();
+      if (error) return null;
+      return mapAssignment(data);
     },
-
     async remove(id: string): Promise<boolean> {
-      const data = await readDb();
-      const before = data.employeeSubjectAssignments.length;
-      data.employeeSubjectAssignments = data.employeeSubjectAssignments.filter(a => a.id !== id);
-      await writeDb(data);
-      return data.employeeSubjectAssignments.length < before;
+      const { error } = await supabase.from('employee_subject_assignments').delete().eq('id', id);
+      return !error;
     },
   },
 
-  // ----------------------------------------
-  // ASSESSMENTS
-  // ----------------------------------------
+  // ── ASSESSMENTS ────────────────────────────────────────────────────────────
   assessments: {
     questions: {
       async findByModule(moduleId: string): Promise<AssessmentQuestion[]> {
-        const data = await readDb();
-        return data.assessmentQuestions.filter(q => q.moduleId === moduleId);
+        const { data, error } = await supabase.from('assessment_questions').select('*').eq('module_id', moduleId);
+        if (error) throw error;
+        return (data ?? []).map(mapQuestion);
       },
       async findById(id: string): Promise<AssessmentQuestion | null> {
-        const data = await readDb();
-        return data.assessmentQuestions.find(q => q.id === id) ?? null;
+        const { data, error } = await supabase.from('assessment_questions').select('*').eq('id', id).single();
+        if (error) return null;
+        return mapQuestion(data);
       },
       async create(question: AssessmentQuestion): Promise<AssessmentQuestion> {
-        const data = await readDb();
-        data.assessmentQuestions.push(question);
-        await writeDb(data);
-        return question;
+        const { data, error } = await supabase.from('assessment_questions').insert({
+          id: question.id,
+          module_id: question.moduleId,
+          text: question.text,
+          option_a: question.optionA,
+          option_b: question.optionB,
+          option_c: question.optionC,
+          option_d: question.optionD,
+          correct_answer: question.correctAnswer,
+          explanation: question.explanation,
+          created_at: question.createdAt,
+        }).select().single();
+        if (error) throw error;
+        return mapQuestion(data);
       },
       async update(id: string, updates: Partial<AssessmentQuestion>): Promise<AssessmentQuestion | null> {
-        const data = await readDb();
-        const idx = data.assessmentQuestions.findIndex(q => q.id === id);
-        if (idx === -1) return null;
-        data.assessmentQuestions[idx] = { ...data.assessmentQuestions[idx], ...updates };
-        await writeDb(data);
-        return data.assessmentQuestions[idx];
+        const dbUpdates: any = {};
+        if (updates.text !== undefined) dbUpdates.text = updates.text;
+        if (updates.optionA !== undefined) dbUpdates.option_a = updates.optionA;
+        if (updates.optionB !== undefined) dbUpdates.option_b = updates.optionB;
+        if (updates.optionC !== undefined) dbUpdates.option_c = updates.optionC;
+        if (updates.optionD !== undefined) dbUpdates.option_d = updates.optionD;
+        if (updates.correctAnswer !== undefined) dbUpdates.correct_answer = updates.correctAnswer;
+        if (updates.explanation !== undefined) dbUpdates.explanation = updates.explanation;
+        const { data, error } = await supabase.from('assessment_questions').update(dbUpdates).eq('id', id).select().single();
+        if (error) return null;
+        return mapQuestion(data);
       },
       async delete(id: string): Promise<boolean> {
-        const data = await readDb();
-        const before = data.assessmentQuestions.length;
-        data.assessmentQuestions = data.assessmentQuestions.filter(q => q.id !== id);
-        await writeDb(data);
-        return data.assessmentQuestions.length < before;
+        const { error } = await supabase.from('assessment_questions').delete().eq('id', id);
+        return !error;
       },
       async deleteByModule(moduleId: string): Promise<void> {
-        const data = await readDb();
-        data.assessmentQuestions = data.assessmentQuestions.filter(q => q.moduleId !== moduleId);
-        await writeDb(data);
+        await supabase.from('assessment_questions').delete().eq('module_id', moduleId);
       },
     },
 
     attempts: {
       async create(attempt: AssessmentAttempt): Promise<AssessmentAttempt> {
-        const data = await readDb();
-        data.assessmentAttempts.push(attempt);
-        await writeDb(data);
-        return attempt;
+        const { data, error } = await supabase.from('assessment_attempts').insert({
+          id: attempt.id,
+          employee_id: attempt.employeeId,
+          subject_id: attempt.subjectId,
+          module_id: attempt.moduleId,
+          attempt_number: attempt.attemptNumber,
+          score: attempt.score,
+          passed: attempt.passed,
+          submitted_at: attempt.submittedAt,
+          answers: attempt.answers,
+        }).select().single();
+        if (error) throw error;
+        return mapAttempt(data);
       },
       async findByEmployee(employeeId: string): Promise<AssessmentAttempt[]> {
-        const data = await readDb();
-        return data.assessmentAttempts.filter(a => a.employeeId === employeeId);
+        const { data, error } = await supabase.from('assessment_attempts').select('*').eq('employee_id', employeeId);
+        if (error) throw error;
+        return (data ?? []).map(mapAttempt);
       },
       async findByModule(moduleId: string): Promise<AssessmentAttempt[]> {
-        const data = await readDb();
-        return data.assessmentAttempts.filter(a => a.moduleId === moduleId);
+        const { data, error } = await supabase.from('assessment_attempts').select('*').eq('module_id', moduleId);
+        if (error) throw error;
+        return (data ?? []).map(mapAttempt);
       },
       async findByEmployeeAndModule(employeeId: string, moduleId: string): Promise<AssessmentAttempt[]> {
-        const data = await readDb();
-        return data.assessmentAttempts.filter(
-          a => a.employeeId === employeeId && a.moduleId === moduleId
-        );
+        const { data, error } = await supabase
+          .from('assessment_attempts')
+          .select('*')
+          .eq('employee_id', employeeId)
+          .eq('module_id', moduleId);
+        if (error) throw error;
+        return (data ?? []).map(mapAttempt);
       },
     },
 
     settings: {
       async findByModule(moduleId: string): Promise<ModuleAssessmentSettings | null> {
-        const data = await readDb();
-        return data.moduleAssessmentSettings.find(s => s.moduleId === moduleId) ?? null;
+        const { data, error } = await supabase.from('module_assessment_settings').select('*').eq('module_id', moduleId).single();
+        if (error) return null;
+        return {
+          moduleId: data.module_id,
+          passingScore: data.passing_score,
+          questionsPerAttempt: data.questions_per_attempt,
+        };
       },
       async upsert(settings: ModuleAssessmentSettings): Promise<ModuleAssessmentSettings> {
-        const data = await readDb();
-        const idx = data.moduleAssessmentSettings.findIndex(s => s.moduleId === settings.moduleId);
-        if (idx === -1) {
-          data.moduleAssessmentSettings.push(settings);
-        } else {
-          data.moduleAssessmentSettings[idx] = settings;
-        }
-        await writeDb(data);
-        return settings;
+        const { data, error } = await supabase.from('module_assessment_settings').upsert({
+          module_id: settings.moduleId,
+          passing_score: settings.passingScore,
+          questions_per_attempt: settings.questionsPerAttempt,
+        }).select().single();
+        if (error) throw error;
+        return {
+          moduleId: data.module_id,
+          passingScore: data.passing_score,
+          questionsPerAttempt: data.questions_per_attempt,
+        };
       },
     },
   },
+
+  // ── LEGACY read/write (kept for any old references) ────────────────────────
+  read: async (): Promise<Schema> => { throw new Error('db.read() is not supported in Supabase mode. Use db.* methods directly.'); },
+  write: async (data: Schema): Promise<void> => { throw new Error('db.write() is not supported in Supabase mode. Use db.* methods directly.'); },
 };
