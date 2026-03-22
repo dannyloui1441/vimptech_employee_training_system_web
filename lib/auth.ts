@@ -1,45 +1,62 @@
 /**
- * Mock Authentication Module
+ * Authentication Module
  *
- * Simulates a session-based auth system without a real login flow.
+ * Supports two auth modes:
  *
- * HOW IT WORKS NOW:
- *   - getCurrentUser() reads the DB and returns the first user whose
- *     role matches SIMULATED_ROLE. Change SIMULATED_ROLE to switch
- *     which "session" is active (Admin | Trainer | Employee).
+ * 1. Bearer token (Flutter mobile app):
+ *    Flutter sends: Authorization: Bearer emp_<userId>
+ *    getCurrentUser() extracts the userId, looks up the user in DB,
+ *    and returns them directly.
+ *
+ * 2. Simulated session (web admin panel):
+ *    If no Bearer token is present, falls back to SIMULATED_ROLE.
+ *    Change SIMULATED_ROLE to switch which admin/trainer is active.
  *
  * HOW TO REPLACE LATER:
- *   - Swap getCurrentUser() to read from a real JWT/session cookie.
- *   - Everything else (requireRole, authGuard) stays the same.
+ *    Swap the simulated session block with real JWT/session cookie logic.
+ *    The Bearer token block stays as-is for mobile.
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { db, type User } from '@/lib/db';
 
-// ─── Simulated session ────────────────────────────────────────────────────
-// Change this value to simulate being logged in as a different role.
+// ─── Simulated session (web panel only) ──────────────────────────────────
 const SIMULATED_ROLE: User['role'] = 'Admin';
 
 // ─── getCurrentUser ───────────────────────────────────────────────────────
 /**
- * Returns the "currently logged-in" user.
- * In this mock: returns the first DB user that matches SIMULATED_ROLE.
- * Returns null if no matching user exists (triggers 401 in API routes).
+ * Resolves the current user from the request context.
+ *
+ * Priority:
+ *   1. Bearer token in Authorization header → look up user by ID
+ *   2. No token → fall back to SIMULATED_ROLE (web panel dev mode)
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(
+    req?: NextRequest | Request
+): Promise<User | null> {
+    // ── 1. Try Bearer token from Authorization header ──
+    if (req) {
+        const authHeader =
+            req.headers.get('Authorization') ?? req.headers.get('authorization');
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.slice(7).trim(); // strip "Bearer "
+
+            // Token format: emp_<userId>
+            if (token.startsWith('emp_')) {
+                const userId = token.slice(4); // strip "emp_"
+                const user = await db.users.findById(userId);
+                return user ?? null;
+            }
+        }
+    }
+
+    // ── 2. Fall back to simulated role (web panel) ──
     const users = await db.users.findAll();
     return users.find(u => u.role === SIMULATED_ROLE) ?? null;
 }
 
 // ─── requireRole ──────────────────────────────────────────────────────────
-/**
- * Throws an AuthError if the provided user's role does not match
- * one of the allowed roles.
- *
- * Usage (inside an API route, after getCurrentUser):
- *   requireRole(user, 'Admin');
- *   requireRole(user, ['Admin', 'Trainer']);
- */
 export function requireRole(
     user: User,
     allowed: User['role'] | User['role'][]
@@ -55,21 +72,19 @@ export function requireRole(
 
 // ─── authGuard ────────────────────────────────────────────────────────────
 /**
- * Convenience wrapper that combines getCurrentUser() + requireRole().
+ * Convenience wrapper combining getCurrentUser() + requireRole().
+ *
+ * Pass the raw Request object so Bearer tokens can be read.
  *
  * Returns either:
- *   { user }          — auth passed, proceed normally
- *   { response }      — auth failed, return this NextResponse immediately
- *
- * Usage (inside an API route):
- *   const guard = await authGuard(['Admin', 'Trainer']);
- *   if ('response' in guard) return guard.response;
- *   const { user } = guard; // fully typed User
+ *   { user }      — auth passed
+ *   { response }  — auth failed, return this NextResponse immediately
  */
 export async function authGuard(
-    allowed: User['role'] | User['role'][]
+    allowed: User['role'] | User['role'][],
+    req?: NextRequest | Request
 ): Promise<{ user: User } | { response: NextResponse }> {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
 
     if (!user) {
         return {

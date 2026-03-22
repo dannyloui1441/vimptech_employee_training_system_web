@@ -12,7 +12,7 @@ const submitSchema = z.object({
 
 // ─── POST /api/assessments/submit ─────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-    const guard = await authGuard(['Admin', 'Trainer', 'Employee']);
+    const guard = await authGuard(['Admin', 'Trainer', 'Employee'], req);
     if ('response' in guard) return guard.response;
 
     try {

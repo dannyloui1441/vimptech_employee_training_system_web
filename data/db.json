@@ -39,7 +39,7 @@
       "mode": "sequential",
       "id": "subject-flutter-001",
       "name": "Flutter Development Training",
-      "description": "A comprehensive 20-day Flutter development training program covering Dart basics, widgets, layouts, and state management.",
+      "description": "A comprehensive 20-DAY Flutter development training program covering Dart basics, widgets, layouts, and state management.",
       "assignedTrainerIds": [
         "trainer-001"
       ],
@@ -344,7 +344,7 @@
     "general": {
       "organizationName": "VimpTech Solutions",
       "logo": null,
-      "primaryColor": "#3b82f6",
+      "primaryColor": "#c10b0b",
       "secondaryColor": "#1e293b",
       "accentColor": "#f59e0b",
       "timezone": "UTC",

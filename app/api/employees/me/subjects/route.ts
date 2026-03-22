@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { authGuard } from '@/lib/auth';
 
-export async function GET() {
-    const guard = await authGuard(['Employee']);
+export async function GET(req: Request) {
+    const guard = await authGuard(['Employee'], req);
     if ('response' in guard) return guard.response;
 
     const { user } = guard;

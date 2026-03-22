@@ -11,7 +11,7 @@ const startSchema = z.object({
 // Shuffles all questions for a module and returns up to questionsPerAttempt.
 // correctAnswer and explanation are stripped from the response.
 export async function POST(req: NextRequest) {
-    const guard = await authGuard(['Admin', 'Trainer', 'Employee']);
+    const guard = await authGuard(['Admin', 'Trainer', 'Employee'], req);
     if ('response' in guard) return guard.response;
 
     try {
