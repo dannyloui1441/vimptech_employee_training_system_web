@@ -24,7 +24,7 @@ export async function GET() {
 
     const [allSubjects, allAssignments, allUsers] = await Promise.all([
         db.subjects.findAll(),
-        db.read().then(d => d.employeeSubjectAssignments),
+        db.assignments.findAll(),
         db.users.findAll(),
     ])
 

@@ -16,7 +16,7 @@ export default async function UsersPage() {
 
   const [users, assignments] = await Promise.all([
     db.users.findAll(),
-    db.read().then(d => d.employeeSubjectAssignments),
+    db.assignments.findAll(),
   ])
 
   // Trainer visibility: only employees assigned to subjects where trainer is assigned
