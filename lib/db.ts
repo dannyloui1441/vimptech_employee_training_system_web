@@ -455,6 +455,13 @@ export const db = {
       if (error) throw error;
       return (data ?? []).map(mapAssignment);
     },
+    async findAll(): Promise<EmployeeSubjectAssignment[]> {
+      const { data, error } = await supabase
+        .from('employee_subject_assignments')
+        .select('*');
+      if (error) throw error;
+      return (data ?? []).map(mapAssignment);
+    },
     async assign(employeeId: string, subjectId: string): Promise<EmployeeSubjectAssignment> {
       const now = new Date().toISOString();
       const { data: existing } = await supabase
