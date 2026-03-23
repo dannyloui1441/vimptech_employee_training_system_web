@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { authGuard } from '@/lib/auth';
 
 export async function GET(req: Request) {
+    console.log('AUTH HEADER:', req.headers.get('Authorization') ?? req.headers.get('authorization') ?? 'NONE');
     const guard = await authGuard(['Employee'], req);
     if ('response' in guard) return guard.response;
 
