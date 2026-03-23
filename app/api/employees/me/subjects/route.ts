@@ -57,3 +57,15 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch subjects' }, { status: 500 });
     }
 }
+
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+    });
+}
+
