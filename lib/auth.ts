@@ -34,34 +34,28 @@ const SIMULATED_ROLE: User['role'] = 'Admin';
 export async function getCurrentUser(
     req?: NextRequest | Request
 ): Promise<User | null> {
+    // ── 1. Try Bearer token from Authorization header ──
     if (req) {
-        // Try standard Authorization header first
-        let token = null;
         const authHeader =
-            req.headers.get('Authorization') ??
-            req.headers.get('authorization');
+            req.headers.get('Authorization') ?? req.headers.get('authorization');
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.slice(7).trim();
-        }
+            const token = authHeader.slice(7).trim(); // strip "Bearer "
 
-        // Fallback: try x-auth-token header
-        if (!token) {
-            const xAuthToken = req.headers.get('x-auth-token');
-            if (xAuthToken) token = xAuthToken;
-        }
-
-        if (token && token.startsWith('emp_')) {
-            const userId = token.slice(4);
-            const user = await db.users.findById(userId);
-            return user ?? null;
+            // Token format: emp_<userId>
+            if (token.startsWith('emp_')) {
+                const userId = token.slice(4); // strip "emp_"
+                const user = await db.users.findById(userId);
+                return user ?? null;
+            }
         }
     }
 
-    // Fall back to simulated role
+    // ── 2. Fall back to simulated role (web panel) ──
     const users = await db.users.findAll();
     return users.find(u => u.role === SIMULATED_ROLE) ?? null;
 }
+
 // ─── requireRole ──────────────────────────────────────────────────────────
 export function requireRole(
     user: User,
