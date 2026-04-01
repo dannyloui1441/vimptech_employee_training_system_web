@@ -95,6 +95,8 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
         }),
       })
 
+      console.log("response", response)
+
       if (!response.ok) throw new Error('Failed to create user')
 
       const created = await response.json()

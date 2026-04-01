@@ -9,8 +9,13 @@
  *    and returns them directly.
  *
  * 2. Simulated session (web admin panel):
- *    If no Bearer token is present, falls back to SIMULATED_ROLE.
+ *    If no Bearer token is present AND allowFallback is true (default),
+ *    falls back to SIMULATED_ROLE.
  *    Change SIMULATED_ROLE to switch which admin/trainer is active.
+ *
+ *    ⚠️  Employee-only routes MUST pass { allowFallback: false } to
+ *    authGuard/getCurrentUser so they never silently pick up a web-admin
+ *    user and expose a confusing 403 instead of a proper 401.
  *
  * HOW TO REPLACE LATER:
  *    Swap the simulated session block with real JWT/session cookie logic.
@@ -23,20 +28,35 @@ import { db, type User } from '@/lib/db';
 // ─── Simulated session (web panel only) ──────────────────────────────────
 const SIMULATED_ROLE: User['role'] = 'Admin';
 
+// ─── Shared CORS headers ──────────────────────────────────────────────────
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+} as const;
+
 // ─── getCurrentUser ───────────────────────────────────────────────────────
 /**
  * Resolves the current user from the request context.
  *
  * Priority:
  *   1. Bearer token in Authorization header → look up user by ID
- *   2. No token → fall back to SIMULATED_ROLE (web panel dev mode)
+ *   2. No token + allowFallback true  → fall back to SIMULATED_ROLE (web panel)
+ *   2. No token + allowFallback false → return null (employee routes)
+ *
+ * @param req           - The incoming request (optional; skips token check if absent)
+ * @param options.allowFallback - When false, never fall back to SIMULATED_ROLE.
+ *                                Defaults to true so existing web-admin routes are unaffected.
  */
 export async function getCurrentUser(
-    req?: NextRequest | Request
+    req?: NextRequest | Request,
+    options: { allowFallback?: boolean } = { allowFallback: true }
 ): Promise<User | null> {
+    const allowFallback = options.allowFallback ?? true;
+
     if (req) {
-        // Try standard Authorization header first
-        let token = null;
+        // ── Bearer token extraction (unchanged) ────────────────────────
+        let token: string | null = null;
+
         const authHeader =
             req.headers.get('Authorization') ??
             req.headers.get('authorization');
@@ -51,17 +71,22 @@ export async function getCurrentUser(
             if (xAuthToken) token = xAuthToken;
         }
 
-        if (token && token.startsWith('emp_')) {
+        if (token?.startsWith('emp_')) {
             const userId = token.slice(4);
             const user = await db.users.findById(userId);
             return user ?? null;
         }
+
+        // A request was supplied but no valid Bearer token was found.
+        // Only fall back to SIMULATED_ROLE if the caller explicitly allows it.
+        if (!allowFallback) return null;
     }
 
-    // Fall back to simulated role
+    // Fall back to simulated role (web panel dev mode)
     const users = await db.users.findAll();
     return users.find(u => u.role === SIMULATED_ROLE) ?? null;
 }
+
 // ─── requireRole ──────────────────────────────────────────────────────────
 export function requireRole(
     user: User,
@@ -82,21 +107,31 @@ export function requireRole(
  *
  * Pass the raw Request object so Bearer tokens can be read.
  *
+ * @param allowed            - Role(s) permitted to access the route.
+ * @param req                - The incoming request.
+ * @param options.allowFallback - Set to false for employee-only routes so that
+ *                               a missing token returns 401 instead of falling
+ *                               back to the simulated web-admin user.
+ *
  * Returns either:
  *   { user }      — auth passed
  *   { response }  — auth failed, return this NextResponse immediately
  */
 export async function authGuard(
     allowed: User['role'] | User['role'][],
-    req?: NextRequest | Request
+    req?: NextRequest | Request,
+    options: { allowFallback?: boolean } = { allowFallback: true }
 ): Promise<{ user: User } | { response: NextResponse }> {
-    const user = await getCurrentUser(req);
+    const user = await getCurrentUser(req, options);
 
     if (!user) {
         return {
             response: NextResponse.json(
                 { error: 'Unauthorized: no active session.' },
-                { status: 401 }
+                {
+                    status: 401,
+                    headers: CORS_HEADERS,
+                }
             ),
         };
     }
@@ -108,7 +143,10 @@ export async function authGuard(
             return {
                 response: NextResponse.json(
                     { error: err.message },
-                    { status: err.statusCode }
+                    {
+                        status: err.statusCode,
+                        headers: CORS_HEADERS,
+                    }
                 ),
             };
         }

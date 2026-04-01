@@ -80,6 +80,7 @@ export function RolesManagement() {
         { id: 'dashboard', label: 'Dashboard', items: ['view', 'analytics', 'export'] },
         { id: 'users', label: 'User Management', items: ['view', 'create', 'edit', 'delete', 'roles', 'passwords'] },
         { id: 'training', label: 'Training Management', items: ['view', 'create', 'edit', 'delete', 'assign', 'track', 'grade'] },
+        { id: 'assessment', label: 'Assessment Management', items: ['view', 'create', 'edit', 'delete', 'assign', 'track', 'grade'] },
         { id: 'schedule', label: 'Schedule Management', items: ['view', 'create', 'edit', 'delete'] },
         { id: 'notifications', label: 'Notifications', items: ['send', 'manage'] },
         { id: 'settings', label: 'Settings', items: ['view', 'modify', 'integrations'] },

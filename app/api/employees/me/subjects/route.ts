@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { authGuard } from '@/lib/auth';
 
-export async function GET(req: Request) {
-    const allHeaders: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-        allHeaders[key] = value;
-    });
-    console.log('ALL HEADERS:', JSON.stringify(allHeaders));
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+} as const;
 
-    const guard = await authGuard(['Employee'], req);
+export async function GET(req: Request) {
+    // ── Temporary debug logging (remove after verification) ──────────────
+    console.log('AUTH HEADER:', req.headers.get('authorization'));
+
+    // allowFallback: false → missing token returns 401, never falls back to Admin
+    const guard = await authGuard(['Employee'], req, { allowFallback: false });
     if ('response' in guard) return guard.response;
 
     const { user } = guard;
@@ -57,9 +60,15 @@ export async function GET(req: Request) {
 
         const validSubjects = subjects.filter(Boolean);
 
-        return NextResponse.json({ subjects: validSubjects });
+        return NextResponse.json(
+            { subjects: validSubjects },
+            { headers: CORS_HEADERS }
+        );
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to fetch subjects' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch subjects' },
+            { status: 500, headers: CORS_HEADERS }
+        );
     }
 }
 
