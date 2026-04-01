@@ -9,7 +9,8 @@ const CORS_HEADERS = {
 
 export async function GET(req: Request) {
     // ── Temporary debug logging (remove after verification) ──────────────
-    console.log('AUTH HEADER:', req.headers.get('authorization'));
+    console.log("ROUTE HIT");
+    console.log("AUTH HEADER:", req.headers.get('authorization'));
 
     // allowFallback: false → missing token returns 401, never falls back to Admin
     const guard = await authGuard(['Employee'], req, { allowFallback: false });
