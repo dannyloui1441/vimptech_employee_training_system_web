@@ -68,7 +68,7 @@ export default function SubjectDetailsPage() {
         let fetchedModules: TrainingModule[] = []
         if (modulesRes.ok) {
           fetchedModules = await modulesRes.json()
-          const sorted = [...fetchedModules].sort((a, b) => a.day - b.day)
+          const sorted = [...fetchedModules].sort((a, b) => a.module - b.module)
           setModules(sorted)
           if (sorted.length > 0) setSelectedModuleId(sorted[0].id)
         }
@@ -136,9 +136,9 @@ export default function SubjectDetailsPage() {
       })
       if (response.ok) {
         const created = await response.json()
-        setModules(prev => [...prev, created].sort((a, b) => a.day - b.day))
+        setModules(prev => [...prev, created].sort((a, b) => a.module - b.module))
         if (!selectedModuleId) setSelectedModuleId(created.id)
-        toast({ title: "Module Added", description: `Day ${created.day} has been created.` })
+        toast({ title: "Module Added", description: `Module ${created.module} has been created.` })
       } else {
         const err = await response.json()
         toast({ title: "Error", description: err.error ?? "Failed to add module", variant: "destructive" })
@@ -270,7 +270,7 @@ export default function SubjectDetailsPage() {
     )
   }
 
-  const existingDays = modules.map(m => m.day)
+  const existingDays = modules.map(m => m.module)
   const selectedModule = modules.find(m => m.id === selectedModuleId) ?? null
 
   // ─── Main view ────────────────────────────────────────────────────────────
@@ -379,7 +379,7 @@ export default function SubjectDetailsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {modules.map(m => (
-                        <SelectItem key={m.id} value={m.id}>Module {m.day}</SelectItem>
+                        <SelectItem key={m.id} value={m.id}>Module {m.module}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -393,7 +393,7 @@ export default function SubjectDetailsPage() {
                 Add at least one module before managing assessment questions.
               </div>
             ) : selectedModule ? (
-              <AssessmentTab moduleId={selectedModule.id} moduleName={`Module ${selectedModule.day}`} />
+              <AssessmentTab moduleId={selectedModule.id} moduleName={`Module ${selectedModule.module}`} />
             ) : null}
           </CardContent>
         </Card>

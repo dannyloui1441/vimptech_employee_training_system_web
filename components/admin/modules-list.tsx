@@ -175,7 +175,7 @@ function DayCard({
   const [expanded, setExpanded] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState({
-    day: module.day,
+    module: module.module,
     gapValue: module.gapValue,
     gapUnit: module.gapUnit,
   })
@@ -194,7 +194,7 @@ function DayCard({
           className="flex items-center gap-2 flex-1 text-left"
         >
           {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          <span className="font-bold text-base">Day {module.day}</span>
+          <span className="font-bold text-base">Module {module.module}</span>
           {subjectMode === "scheduled" && (module.gapValue ?? 0) > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-xs font-medium">
               +{module.gapValue} {module.gapUnit}
@@ -218,7 +218,7 @@ function DayCard({
             <AlertDialogContent>
               <AlertDialogTitle>Delete Module</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete Day {module.day} and all its materials?
+                Are you sure you want to delete Module {module.module} and all its materials?
               </AlertDialogDescription>
               <div className="flex justify-end gap-2">
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -240,8 +240,8 @@ function DayCard({
               <Input
                 type="number"
                 min="1"
-                value={editData.day}
-                onChange={(e) => setEditData({ ...editData, day: Number.parseInt(e.target.value) || 1 })}
+                value={editData.module}
+                onChange={(e) => setEditData({ ...editData, module: Number.parseInt(e.target.value) || 1 })}
                 className="h-8 w-24 text-sm"
               />
             </div>
@@ -316,7 +316,7 @@ export function ModulesList({
   onDeleteMaterial,
   materials,
 }: ModulesListProps) {
-  const sortedModules = [...modules].sort((a, b) => a.day - b.day)
+  const sortedModules = [...modules].sort((a, b) => a.module - b.module)
 
   if (modules.length === 0) {
     return (

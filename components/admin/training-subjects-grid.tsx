@@ -201,7 +201,7 @@ function AssessmentDialog({ subject, open, onClose }: AssessmentDialogProps) {
         fetch(`/api/training-modules?subjectId=${subject.id}`)
             .then(r => r.json())
             .then((data: TrainingModule[]) => {
-                const sorted = [...data].sort((a, b) => a.day - b.day)
+                const sorted = [...data].sort((a, b) => a.module - b.module)
                 setModules(sorted)
                 if (sorted.length > 0) setSelectedModuleId(sorted[0].id)
             })
@@ -231,7 +231,7 @@ function AssessmentDialog({ subject, open, onClose }: AssessmentDialogProps) {
                             </SelectTrigger>
                             <SelectContent>
                                 {modules.map(m => (
-                                    <SelectItem key={m.id} value={m.id}>Module {m.day}</SelectItem>
+                                    <SelectItem key={m.id} value={m.id}>Module {m.module}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -251,7 +251,7 @@ function AssessmentDialog({ subject, open, onClose }: AssessmentDialogProps) {
                     ) : selectedModule ? (
                         <AssessmentQuestionsManager
                             moduleId={selectedModule.id}
-                            moduleName={`Module ${selectedModule.day}`}
+                            moduleName={`Module ${selectedModule.module}`}
                         />
                     ) : null}
                 </div>

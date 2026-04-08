@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { authGuard } from '@/lib/auth';
 import type { User } from '@/lib/db';
 
-// Schema aligned with new contract — modules are pure day containers, no media fields
+// Schema aligned with new contract — `module` = sequence order, no `day` field
 const moduleUpdateSchema = z.object({
     subjectId: z.string().optional(),
-    day: z.number().int().min(1).optional(),
+    module: z.number().int().min(1).optional(),
     gapValue: z.number().int().min(0).optional(),
     gapUnit: z.enum(['days', 'weeks']).optional(),
 });

@@ -27,13 +27,13 @@ export interface TrainingSubject {
 }
 
 // ============================================
-// TRAINING MODULE  (1 Module = 1 Day container)
+// TRAINING MODULE  (1 Module = 1 sequence container)
 // ============================================
 export interface TrainingModule {
   id: string;
   subjectId: string;
-  /** Day number within the subject. Must be unique per subject. */
-  day: number;
+  /** Module sequence order within the subject. Must be unique per subject. */
+  module: number;
   /**
    * Gap before this module becomes available (used only when subject.mode === "scheduled").
    * Defaults to 0 / "days" for backward-compatibility and sequential subjects.

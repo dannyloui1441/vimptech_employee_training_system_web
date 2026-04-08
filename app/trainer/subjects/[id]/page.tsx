@@ -60,7 +60,7 @@ export default function TrainerSubjectDetailPage() {
                 let fetchedModules: TrainingModule[] = []
                 if (modulesRes.ok) {
                     fetchedModules = await modulesRes.json()
-                    const sorted = [...fetchedModules].sort((a, b) => a.day - b.day)
+                    const sorted = [...fetchedModules].sort((a, b) => a.module - b.module)
                     setModules(sorted)
                     if (sorted.length > 0) setSelectedModuleId(sorted[0].id)
                 }
@@ -92,9 +92,9 @@ export default function TrainerSubjectDetailPage() {
             })
             if (res.ok) {
                 const created = await res.json()
-                setModules(prev => [...prev, created].sort((a, b) => a.day - b.day))
+                setModules(prev => [...prev, created].sort((a, b) => a.module - b.module))
                 if (!selectedModuleId) setSelectedModuleId(created.id)
-                toast({ title: "Module Added", description: `Day ${created.day} created.` })
+                toast({ title: "Module Added", description: `Module ${created.module} created.` })
             } else {
                 const err = await res.json()
                 toast({ title: "Error", description: err.error ?? "Failed to add module", variant: "destructive" })
@@ -222,7 +222,7 @@ export default function TrainerSubjectDetailPage() {
         )
     }
 
-    const existingDays = modules.map(m => m.day)
+    const existingDays = modules.map(m => m.module)
     const selectedModule = modules.find(m => m.id === selectedModuleId) ?? null
 
     return (
@@ -327,7 +327,7 @@ export default function TrainerSubjectDetailPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             {modules.map(m => (
-                                                <SelectItem key={m.id} value={m.id}>Module {m.day}</SelectItem>
+                                                <SelectItem key={m.id} value={m.id}>Module {m.module}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -341,7 +341,7 @@ export default function TrainerSubjectDetailPage() {
                                 Add at least one module before managing assessment questions.
                             </p>
                         ) : selectedModule ? (
-                            <AssessmentTab moduleId={selectedModule.id} moduleName={`Module ${selectedModule.day}`} />
+                            <AssessmentTab moduleId={selectedModule.id} moduleName={`Module ${selectedModule.module}`} />
                         ) : null}
                     </CardContent>
                 </Card>

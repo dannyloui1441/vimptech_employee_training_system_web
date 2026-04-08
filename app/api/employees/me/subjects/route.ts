@@ -24,16 +24,31 @@ export async function GET(req: Request) {
                 if (!subject) return null;
 
                 const modules = await db.modules.findBySubjectId(subject.id);
-                const sortedModules = modules.sort((a, b) => a.day - b.day);
+                const sortedModules = [...modules].sort((a, b) => a.module - b.module);
 
-                const modulesWithMaterials = await Promise.all(
-                    sortedModules.map(async (module) => {
-                        const materials = await db.materials.findByModuleId(module.id);
+                // Compute scheduledDay dynamically — never stored in DB
+                let currentDay = 1;
+                const modulesWithSchedule = await Promise.all(
+                    sortedModules.map(async (mod, index) => {
+                        if (index > 0) {
+                            const gapValue = mod.gapValue ?? 0;
+                            const gapUnit = mod.gapUnit ?? 'days';
+                            const safeGapValue = Math.max(0, gapValue);
+
+                            const gap =
+                                gapUnit === 'weeks'
+                                    ? safeGapValue * 7
+                                    : safeGapValue;
+                            currentDay += gap;
+                        }
+
+                        const materials = await db.materials.findByModuleId(mod.id);
                         return {
-                            id: module.id,
-                            day: module.day,
-                            gapValue: module.gapValue,
-                            gapUnit: module.gapUnit,
+                            id: mod.id,
+                            module: mod.module,
+                            scheduledDay: currentDay,
+                            gapValue: mod.gapValue,
+                            gapUnit: mod.gapUnit,
                             materials: materials.map(mat => ({
                                 id: mat.id,
                                 title: mat.title,
@@ -50,7 +65,7 @@ export async function GET(req: Request) {
                     description: subject.description,
                     mode: subject.mode,
                     assignedAt: assignment.assignedAt,
-                    modules: modulesWithMaterials,
+                    modules: modulesWithSchedule,
                 };
             })
         );

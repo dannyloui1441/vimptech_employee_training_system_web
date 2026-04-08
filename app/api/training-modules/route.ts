@@ -3,15 +3,48 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import { authGuard } from '@/lib/auth';
 import type { User } from '@/lib/db';
+import type { TrainingModule } from '@/lib/models';
 
-// Schema aligned with new contract — modules are pure day containers, no media fields
+// Schema aligned with new contract — `module` = sequence order, no `day` field
 const moduleSchema = z.object({
     id: z.string(),
     subjectId: z.string(),
-    day: z.number().int().min(1),
+    module: z.number().int().min(1),
     gapValue: z.number().int().min(0).optional().default(0),
     gapUnit: z.enum(['days', 'weeks']).optional().default('days'),
 });
+
+/**
+ * Compute scheduledDay dynamically from gap_value / gap_unit.
+ * Always sorts by `module` first to guarantee correct ordering.
+ * First module always starts at scheduledDay = 1.
+ * scheduledDay is NEVER stored in the database.
+ */
+function computeScheduledDays(modules: TrainingModule[]) {
+    const sorted = [...modules].sort((a, b) => a.module - b.module);
+
+    let currentDay = 1;
+
+    return sorted.map((mod, index) => {
+        if (index > 0) {
+            const gapValue = mod.gapValue ?? 0;
+            const gapUnit = mod.gapUnit ?? 'days';
+            const safeGapValue = Math.max(0, gapValue);
+
+            const gap =
+                gapUnit === 'weeks'
+                    ? safeGapValue * 7
+                    : safeGapValue;
+
+            currentDay += gap;
+        }
+
+        return {
+            ...mod,
+            scheduledDay: currentDay,
+        };
+    });
+}
 
 /**
  * Verifies a Trainer is allowed to act on a given subjectId.
@@ -61,14 +94,14 @@ export async function GET(request: Request) {
             if (denied) return denied;
 
             const modules = await db.modules.findBySubjectId(subjectId);
-            return NextResponse.json(modules);
+            return NextResponse.json({ modules: computeScheduledDays(modules) });
         }
 
         // No subjectId filter — return all for Admin, filter by assignment for Trainer
         const allModules = await db.modules.findAll();
 
         if (user.role === 'Admin') {
-            return NextResponse.json(allModules);
+            return NextResponse.json({ modules: computeScheduledDays(allModules) });
         }
 
         // For Trainers: load assigned subjects and filter modules accordingly
@@ -79,7 +112,7 @@ export async function GET(request: Request) {
                 .map(p => p.id)
         );
         const visibleModules = allModules.filter(m => assignedSubjectIds.has(m.subjectId));
-        return NextResponse.json(visibleModules);
+        return NextResponse.json({ modules: computeScheduledDays(visibleModules) });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch training modules' }, { status: 500 });
     }
@@ -99,12 +132,12 @@ export async function POST(request: Request) {
         const denied = await assertSubjectAccess(validatedData.subjectId, user);
         if (denied) return denied;
 
-        // Validate uniqueness: day must not already exist for this subject
+        // Validate uniqueness: module number must not already exist for this subject
         const existing = await db.modules.findBySubjectId(validatedData.subjectId);
-        const dayExists = existing.some(m => m.day === validatedData.day && m.id !== validatedData.id);
-        if (dayExists) {
+        const moduleExists = existing.some(m => m.module === validatedData.module && m.id !== validatedData.id);
+        if (moduleExists) {
             return NextResponse.json(
-                { error: `Day ${validatedData.day} already exists for this subject.` },
+                { error: `Module ${validatedData.module} already exists for this subject.` },
                 { status: 409 }
             );
         }

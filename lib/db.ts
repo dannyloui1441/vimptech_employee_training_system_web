@@ -150,7 +150,7 @@ function mapModule(row: any): TrainingModule {
   return {
     id: row.id,
     subjectId: row.subject_id,
-    day: row.day,
+    module: row.module,
     gapValue: row.gap_value ?? 0,
     gapUnit: row.gap_unit ?? 'days',
   };
@@ -313,7 +313,7 @@ export const db = {
       return (data ?? []).map(mapModule);
     },
     async findBySubjectId(subjectId: string): Promise<TrainingModule[]> {
-      const { data, error } = await supabase.from('training_modules').select('*').eq('subject_id', subjectId).order('day');
+      const { data, error } = await supabase.from('training_modules').select('*').eq('subject_id', subjectId).order('module');
       if (error) throw error;
       return (data ?? []).map(mapModule);
     },
@@ -326,7 +326,7 @@ export const db = {
       const { data, error } = await supabase.from('training_modules').insert({
         id: module.id,
         subject_id: module.subjectId,
-        day: module.day,
+        module: module.module,
         gap_value: module.gapValue,
         gap_unit: module.gapUnit,
       }).select().single();
@@ -335,7 +335,7 @@ export const db = {
     },
     async update(id: string, updates: Partial<TrainingModule>): Promise<TrainingModule | null> {
       const dbUpdates: any = {};
-      if (updates.day !== undefined) dbUpdates.day = updates.day;
+      if (updates.module !== undefined) dbUpdates.module = updates.module;
       if (updates.gapValue !== undefined) dbUpdates.gap_value = updates.gapValue;
       if (updates.gapUnit !== undefined) dbUpdates.gap_unit = updates.gapUnit;
       const { data, error } = await supabase.from('training_modules').update(dbUpdates).eq('id', id).select().single();

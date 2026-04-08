@@ -44,7 +44,7 @@ export default function AdminAssessmentPage() {
         fetch(`/api/training-modules?subjectId=${selectedSubjectId}`)
             .then(r => r.json())
             .then((data: TrainingModule[]) => {
-                const sorted = [...data].sort((a, b) => a.day - b.day)
+                const sorted = [...data].sort((a, b) => a.module - b.module)
                 setModules(sorted)
                 if (sorted.length > 0) setSelectedModuleId(sorted[0].id)
             })
@@ -184,7 +184,7 @@ export default function AdminAssessmentPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {modules.map(m => (
-                                            <SelectItem key={m.id} value={m.id}>Module {m.day}</SelectItem>
+                                            <SelectItem key={m.id} value={m.id}>Module {m.module}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -194,7 +194,7 @@ export default function AdminAssessmentPage() {
                             {selectedModule && (
                                 <AssessmentQuestionsManager
                                     moduleId={selectedModule.id}
-                                    moduleName={`Module ${selectedModule.day}`}
+                                    moduleName={`Module ${selectedModule.module}`}
                                 />
                             )}
                         </>

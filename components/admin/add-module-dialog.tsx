@@ -34,7 +34,7 @@ export function AddModuleDialog({
   const nextDay = existingDays.length > 0 ? Math.max(...existingDays) + 1 : 1
 
   const [formData, setFormData] = useState({
-    day: nextDay,
+    module: nextDay,
     gapValue: 0,
     gapUnit: "days" as "days" | "weeks",
   })
@@ -43,11 +43,11 @@ export function AddModuleDialog({
   useEffect(() => {
     if (open) {
       const next = existingDays.length > 0 ? Math.max(...existingDays) + 1 : 1
-      setFormData(prev => ({ ...prev, day: next }))
+      setFormData(prev => ({ ...prev, module: next }))
     }
   }, [open, existingDays])
 
-  const dayConflict = existingDays.includes(formData.day)
+  const dayConflict = existingDays.includes(formData.module)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,7 +56,7 @@ export function AddModuleDialog({
     const newModule: TrainingModule = {
       id: `mod-${Date.now()}`,
       subjectId,
-      day: formData.day,
+      module: formData.module,
       gapValue: subjectMode === "scheduled" ? formData.gapValue : 0,
       gapUnit: subjectMode === "scheduled" ? formData.gapUnit : "days",
     }
@@ -77,24 +77,24 @@ export function AddModuleDialog({
         <DialogHeader>
           <DialogTitle>Add New Module</DialogTitle>
           <DialogDescription>
-            Each module represents one training day. Add materials inside the module after creation.
+            Each module represents one training unit. Add materials inside the module after creation.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="day">Day Number</Label>
+            <Label htmlFor="module">Module Number</Label>
             <Input
-              id="day"
+              id="module"
               type="number"
               min="1"
-              value={formData.day}
-              onChange={(e) => setFormData({ ...formData, day: Number.parseInt(e.target.value) || 1 })}
+              value={formData.module}
+              onChange={(e) => setFormData({ ...formData, module: Number.parseInt(e.target.value) || 1 })}
               className={dayConflict ? "border-destructive" : ""}
             />
             {dayConflict && (
               <p className="flex items-center gap-1.5 text-xs text-destructive mt-1">
                 <AlertCircle className="h-3 w-3" />
-                Day {formData.day} already exists for this subject.
+                Module {formData.module} already exists for this subject.
               </p>
             )}
           </div>
