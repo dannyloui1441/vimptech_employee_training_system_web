@@ -76,10 +76,15 @@ export async function getCurrentUser(
             token = authHeader.slice(7).trim();
         }
 
-        // Fallback: try x-auth-token header
+
+        // Fallback: cookie header (set by client on login)
+        // Uses regex to safely extract the token value without fragile string splits.
         if (!token) {
-            const xAuthToken = req.headers.get('x-auth-token');
-            if (xAuthToken) token = xAuthToken;
+            const cookieHeader = req.headers.get('cookie');
+            if (cookieHeader) {
+                const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
+                if (match?.[1]) token = match[1].trim();
+            }
         }
 
         if (token) {
@@ -90,6 +95,9 @@ export async function getCurrentUser(
                     try {
                         const decoded = jwt.verify(token, secret) as JwtPayload;
                         if (decoded?.userId) {
+                            // Always fetch from DB — role from DB is authoritative.
+                            // The JWT payload role is used for routing UX only (client-side);
+                            // the server always re-reads role from the database.
                             const user = await db.users.findById(decoded.userId);
                             return user ?? null;
                         }

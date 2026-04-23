@@ -1,24 +1,37 @@
-'use client'
-
 import type React from "react"
-import { AdminSidebar } from "@/components/admin/admin-sidebar"
-import { AdminHeader } from "@/components/admin/admin-header"
-import AuthGuard from "@/components/shared/auth-guard"
+import { redirect } from "next/navigation"
+import { getCurrentUser } from "@/lib/auth"
+import { cookies } from "next/headers"
+import AdminLayoutClient from "./layout-client"
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <AuthGuard allowedRoles={['Admin']}>
-      <div className="flex min-h-screen bg-background">
-        <AdminSidebar />
-        <div className="flex-1 flex flex-col">
-          <AdminHeader />
-          <main className="flex-1 p-6 md:p-8">{children}</main>
-        </div>
-      </div>
-    </AuthGuard>
-  )
+  // ── Server-side auth guard ────────────────────────────────────────────────
+  // Reads the token cookie directly using Next.js cookies() API.
+  // This runs before any client code, preventing flicker and providing
+  // true server-side protection in addition to the client-side AuthGuard.
+  const cookieStore = await cookies()
+  const tokenCookie = cookieStore.get('token')
+
+  let req: Request | undefined
+  if (tokenCookie?.value) {
+    // Construct a minimal request-like object so getCurrentUser can read the cookie
+    req = new Request('http://localhost', {
+      headers: { cookie: `token=${tokenCookie.value}` },
+    })
+  }
+
+  const user = await getCurrentUser(req, { allowFallback: true })
+
+  if (!user) redirect('/login')
+  if (user.role !== 'Admin') {
+    // Trainer got here via a direct URL — send them to their panel
+    if (user.role === 'Trainer') redirect('/trainer/dashboard')
+    redirect('/login')
+  }
+
+  return <AdminLayoutClient>{children}</AdminLayoutClient>
 }

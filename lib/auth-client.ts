@@ -17,7 +17,9 @@ const TOKEN_KEY = 'token';
 export function setToken(token: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(TOKEN_KEY, token);
-    document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+    // max-age=604800 = 7 days; Secure only in production (HTTPS); SameSite=Lax for CSRF mitigation
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=604800; SameSite=Lax${secure}`;
 }
 
 /** Retrieve token from localStorage */
@@ -30,7 +32,7 @@ export function getToken(): string | null {
 export function removeToken(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(TOKEN_KEY);
-    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 // ─── JWT Decoding (no verification — client-side only) ────────────────────

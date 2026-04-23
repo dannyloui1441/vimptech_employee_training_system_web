@@ -1,24 +1,29 @@
-'use client'
-
 import type React from "react"
-import { TrainerSidebar } from "@/components/trainer/trainer-sidebar"
-import { TrainerHeader } from "@/components/trainer/trainer-header"
-import AuthGuard from "@/components/shared/auth-guard"
+import { redirect } from "next/navigation"
+import { getCurrentUser } from "@/lib/auth"
+import { cookies } from "next/headers"
+import TrainerLayoutClient from "./layout-client"
 
-export default function TrainerLayout({
+export default async function TrainerLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    return (
-        <AuthGuard allowedRoles={['Admin', 'Trainer']}>
-            <div className="flex min-h-screen bg-background">
-                <TrainerSidebar />
-                <div className="flex-1 flex flex-col">
-                    <TrainerHeader />
-                    <main className="flex-1 p-6 md:p-8">{children}</main>
-                </div>
-            </div>
-        </AuthGuard>
-    )
+    // ── Server-side auth guard ────────────────────────────────────────────────
+    const cookieStore = await cookies()
+    const tokenCookie = cookieStore.get('token')
+
+    let req: Request | undefined
+    if (tokenCookie?.value) {
+        req = new Request('http://localhost', {
+            headers: { cookie: `token=${tokenCookie.value}` },
+        })
+    }
+
+    const user = await getCurrentUser(req, { allowFallback: true })
+
+    if (!user) redirect('/login')
+    if (user.role === 'Employee') redirect('/')
+
+    return <TrainerLayoutClient>{children}</TrainerLayoutClient>
 }
