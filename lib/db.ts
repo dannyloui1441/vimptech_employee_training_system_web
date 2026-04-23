@@ -34,6 +34,7 @@ export interface User {
   progress: number;
   avatar?: string;
   password?: string;
+  passwordHash?: string;
   mobileNumber?: string;
   additionalMobileNumber?: string;
 }
@@ -130,6 +131,7 @@ function mapUser(row: any): User {
     progress: row.progress ?? 0,
     avatar: row.avatar,
     password: row.password,
+    passwordHash: row.password_hash,
     mobileNumber: row.mobile_number,
     additionalMobileNumber: row.additional_mobile_number,
   };
@@ -255,6 +257,15 @@ export const db = {
       if (updates.mobileNumber !== undefined) dbUpdates.mobile_number = updates.mobileNumber;
       if (updates.additionalMobileNumber !== undefined) dbUpdates.additional_mobile_number = updates.additionalMobileNumber;
       const { data, error } = await supabase.from('users').update(dbUpdates).eq('id', id).select().single();
+      if (error) return null;
+      return mapUser(data);
+    },
+    async findByEmail(email: string): Promise<User | null> {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('email', email.trim())
+        .single();
       if (error) return null;
       return mapUser(data);
     },

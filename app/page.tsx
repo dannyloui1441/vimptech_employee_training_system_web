@@ -14,7 +14,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Admin Panel */}
-          <Link href="/admin/dashboard" className="w-full">
+          <Link href="/login" className="w-full">
             <Card className="bg-cyan-200 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-8 cursor-pointer hover:translate-x-2 hover:translate-y-2 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all h-full">
               <div className="flex flex-col items-center text-center gap-4">
                 <div className="h-20 w-20 bg-black border-4 border-black flex items-center justify-center">
@@ -32,7 +32,7 @@ export default function HomePage() {
           </Link>
 
           {/* Trainer Panel */}
-          <Link href="/trainer/dashboard" className="w-full">
+          <Link href="/login" className="w-full">
             <Card className="bg-yellow-200 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-8 cursor-pointer hover:translate-x-2 hover:translate-y-2 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all h-full">
               <div className="flex flex-col items-center text-center gap-4">
                 <div className="h-20 w-20 bg-black border-4 border-black flex items-center justify-center">
