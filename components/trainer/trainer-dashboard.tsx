@@ -35,7 +35,9 @@ export function TrainerDashboard({ trainerName }: TrainerDashboardProps) {
                 if (!subjectsRes.ok) throw new Error("Failed to fetch subjects")
 
                 const subjectList: TrainingSubject[] = await subjectsRes.json()
-                const modules = modulesRes.ok ? await modulesRes.json() : []
+                const modulesData = modulesRes.ok ? await modulesRes.json() : { modules: [] };
+                console.log("Modules API response:", modulesData);
+                const modules = modulesData.modules ?? [];
 
                 // Build module count per subjectId
                 const moduleCountMap: Record<string, number> = {}

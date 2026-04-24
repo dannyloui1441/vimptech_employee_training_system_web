@@ -24,7 +24,9 @@ export default function TrainerSubjectsPage() {
                 if (!subjRes.ok) throw new Error("Failed to load subjects")
 
                 const subjectList: TrainingSubject[] = await subjRes.json()
-                const mods = modRes.ok ? await modRes.json() : []
+                const modsData = modRes.ok ? await modRes.json() : { modules: [] };
+                console.log("Modules API response:", modsData);
+                const mods = modsData.modules ?? [];
 
                 const countMap: Record<string, number> = {}
                 for (const m of mods) {

@@ -67,7 +67,9 @@ export default function SubjectDetailsPage() {
 
         let fetchedModules: TrainingModule[] = []
         if (modulesRes.ok) {
-          fetchedModules = await modulesRes.json()
+          const data = await modulesRes.json()
+          console.log("Modules API response:", data);
+          fetchedModules = data.modules ?? []
           const sorted = [...fetchedModules].sort((a, b) => a.module - b.module)
           setModules(sorted)
           if (sorted.length > 0) setSelectedModuleId(sorted[0].id)

@@ -44,8 +44,10 @@ export default function TrainerAssessmentPage() {
         setSelectedModuleId('')
         fetch(`/api/training-modules?subjectId=${selectedSubjectId}`)
             .then(r => r.json())
-            .then((data: TrainingModule[]) => {
-                const sorted = [...data].sort((a, b) => a.module - b.module)
+            .then((data: any) => {
+                console.log("Modules API response:", data);
+                const modulesList = data.modules ?? [];
+                const sorted = [...modulesList].sort((a: any, b: any) => a.module - b.module)
                 setModules(sorted)
                 if (sorted.length > 0) setSelectedModuleId(sorted[0].id)
             })
