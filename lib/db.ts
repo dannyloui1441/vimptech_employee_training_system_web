@@ -245,7 +245,7 @@ export const db = {
     },
     /** Creates a user with a bcrypt-hashed password. Use this for all new user creation. */
     async createWithHash(user: Omit<User, 'password'> & { passwordHash: string }): Promise<User> {
-      const { data, error } = await supabase.from('users').insert({
+      const insertPayload = {
         id: user.id,
         name: user.name,
         email: user.email,
@@ -256,9 +256,23 @@ export const db = {
         avatar: user.avatar,
         password_hash: user.passwordHash,
         mobile_number: user.mobileNumber,
-        additional_mobile_number: user.additionalMobileNumber,
-      }).select().single();
-      if (error) throw error;
+        additional_mobile_number: user.additionalMobileNumber ?? null,
+      };
+
+      console.log('Insert payload:', {
+        name: insertPayload.name,
+        email: insertPayload.email,
+        role: insertPayload.role,
+        mobile_number: insertPayload.mobile_number,
+        department: insertPayload.department,
+        status: insertPayload.status,
+      });
+
+      const { data, error } = await supabase.from('users').insert(insertPayload).select().single();
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
       return mapUser(data);
     },
     async update(id: string, updates: Partial<User>): Promise<User | null> {
