@@ -237,7 +237,24 @@ export const db = {
         status: user.status,
         progress: user.progress,
         avatar: user.avatar,
-        password: user.password,
+        mobile_number: user.mobileNumber,
+        additional_mobile_number: user.additionalMobileNumber,
+      }).select().single();
+      if (error) throw error;
+      return mapUser(data);
+    },
+    /** Creates a user with a bcrypt-hashed password. Use this for all new user creation. */
+    async createWithHash(user: Omit<User, 'password'> & { passwordHash: string }): Promise<User> {
+      const { data, error } = await supabase.from('users').insert({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        status: user.status,
+        progress: user.progress,
+        avatar: user.avatar,
+        password_hash: user.passwordHash,
         mobile_number: user.mobileNumber,
         additional_mobile_number: user.additionalMobileNumber,
       }).select().single();

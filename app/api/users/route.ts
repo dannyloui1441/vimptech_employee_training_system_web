@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import bcrypt from 'bcrypt';
 import { authGuard } from '@/lib/auth';
 import { generatePassword } from '@/lib/utils';
 
@@ -39,22 +40,50 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const validatedData = userSchema.parse(body);
-        const password = generatePassword();
 
-        const newUser = await db.users.create({
+        // Validate required fields
+        const { name, email, role, mobileNumber, department, status, additionalMobileNumber } = body;
+        if (!name || !email || !role || !mobileNumber || !department || !status) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = userSchema.parse(body);
+
+        // Generate and hash password
+        const plainPassword = generatePassword();
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+        // Create user — store password_hash only, never plain text
+        const newUser = await db.users.createWithHash({
             id: crypto.randomUUID(),
-            ...validatedData,
-            password,
+            name: validatedData.name,
+            email: validatedData.email,
+            role: validatedData.role,
+            department: validatedData.department,
+            status: validatedData.status,
+            mobileNumber: validatedData.mobileNumber,
+            additionalMobileNumber: validatedData.additionalMobileNumber,
+            passwordHash: hashedPassword,
             progress: 0,
             avatar: `https://i.pravatar.cc/150?u=${validatedData.email}`,
         });
 
-        return NextResponse.json(newUser, { status: 201 });
+        // Return the plain password ONCE so the admin can share it — it is NOT stored
+        return NextResponse.json(
+            { ...newUser, password: plainPassword },
+            { status: 201 }
+        );
     } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors }, { status: 400 });
         }
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+
+        // Surface Supabase / DB errors explicitly
+        const message = error instanceof Error ? error.message : 'Failed to create user';
+        console.error('[POST /api/users]', error);
+        return NextResponse.json({ error: message }, { status: 400 });
     }
 }

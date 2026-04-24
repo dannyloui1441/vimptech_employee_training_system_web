@@ -95,15 +95,18 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
         }),
       })
 
-      console.log("response", response)
-
-      if (!response.ok) throw new Error('Failed to create user')
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMessage = errorBody?.error ?? 'Failed to create user';
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+      }
 
       const created = await response.json()
       setCreatedPassword(created.password ?? null)
       router.refresh()
-    } catch {
-      toast({ title: "Error", description: "Failed to create user. Please try again.", variant: "destructive" })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create user. Please try again.'
+      toast({ title: "Error", description: message, variant: "destructive" })
     } finally {
       setLoading(false)
     }
