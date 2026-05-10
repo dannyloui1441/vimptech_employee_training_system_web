@@ -50,33 +50,21 @@ export async function GET(req: Request) {
                 const modules = await db.modules.findBySubjectId(subject.id);
                 const sortedModules = [...modules].sort((a, b) => a.module - b.module);
 
-                const mode = subject.mode ?? 'sequential';
-
-                // ── Anchor date for scheduled subjects ──────────────────────────
-                // assigned_at is used as day-0 reference; fall back to now if missing.
-                const assignedAt = assignment.assignedAt
-                    ? new Date(assignment.assignedAt)
-                    : new Date();
-                // Strip time component so comparisons are day-accurate (UTC midnight)
-                assignedAt.setUTCHours(0, 0, 0, 0);
-
-                const today = new Date();
-                today.setUTCHours(0, 0, 0, 0);
-
-                // ── Pass 1: compute scheduledDay, overallProgress, and materials ─
-                // We need overallProgress of each module before we can determine
-                // sequential locks, so we build the full enriched list first.
-                let cumulativeGapDays = 0; // tracks cumulative gap for scheduled day
-                const enriched = await Promise.all(
+                // Compute scheduledDay dynamically — never stored in DB
+                let currentDay = 1;
+                const modulesWithSchedule = await Promise.all(
                     sortedModules.map(async (mod, index) => {
-                        // gap_value treated as DAYS ONLY — gap_unit is intentionally ignored
                         if (index > 0) {
-                            const safeGap = Math.max(0, mod.gapValue ?? 0);
-                            cumulativeGapDays += safeGap;
-                        }
+                            const gapValue = mod.gapValue ?? 0;
+                            const gapUnit = mod.gapUnit ?? 'days';
+                            const safeGapValue = Math.max(0, gapValue);
 
-                        // scheduledDay is 1-based: module 1 = day 1
-                        const scheduledDay = 1 + cumulativeGapDays;
+                            const gap =
+                                gapUnit === 'weeks'
+                                    ? safeGapValue * 7
+                                    : safeGapValue;
+                            currentDay += gap;
+                        }
 
                         const materials = await db.materials.findByModuleId(mod.id);
 
@@ -157,48 +145,46 @@ export async function GET(req: Request) {
                     return {
                         id: mod.id,
                         module: mod.module,
-                        scheduledDay,
+                        scheduledDay: currentDay,
                         gapValue: mod.gapValue,
                         gapUnit: mod.gapUnit,
                         content_progress_percent: contentProgressPercent,
                         assessment_passed: assessmentPassed,
                         overall_progress: overallProgress,
-                        is_locked: isLocked,
-                        unlock_in_days: unlockInDays,
-                        unlock_date: unlockDate,
-                        materials: materials.map((mat: any) => ({
+                        materials: materials.map(mat => ({
                             id: mat.id,
                             title: mat.title,
                             type: mat.type,
                             mediaUrl: mat.mediaUrl,
                         })),
                     };
-                });
+                })
+                );
 
-                return {
-                    id: subject.id,
-                    name: subject.name,
-                    description: subject.description,
-                    mode,
-                    assignedAt: assignment.assignedAt,
-                    modules: modulesWithSchedule,
-                };
-            })
+        return {
+            id: subject.id,
+            name: subject.name,
+            description: subject.description,
+            mode,
+            assignedAt: assignment.assignedAt,
+            modules: modulesWithSchedule,
+        };
+    })
         );
 
-        const validSubjects = subjects.filter(Boolean);
+    const validSubjects = subjects.filter(Boolean);
 
-        return NextResponse.json(
-            { subjects: validSubjects },
-            { headers: CORS_HEADERS }
-        );
-    } catch (error) {
-        console.error('[employees/me/subjects] Error:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch subjects' },
-            { status: 500, headers: CORS_HEADERS }
-        );
-    }
+    return NextResponse.json(
+        { subjects: validSubjects },
+        { headers: CORS_HEADERS }
+    );
+} catch (error) {
+    console.error('[employees/me/subjects] Error:', error);
+    return NextResponse.json(
+        { error: 'Failed to fetch subjects' },
+        { status: 500, headers: CORS_HEADERS }
+    );
+}
 }
 
 export async function OPTIONS() {
