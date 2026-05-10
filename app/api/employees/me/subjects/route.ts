@@ -50,141 +50,136 @@ export async function GET(req: Request) {
                 const modules = await db.modules.findBySubjectId(subject.id);
                 const sortedModules = [...modules].sort((a, b) => a.module - b.module);
 
-                // Compute scheduledDay dynamically — never stored in DB
-                let currentDay = 1;
-                const modulesWithSchedule = await Promise.all(
-                    sortedModules.map(async (mod, index) => {
-                        if (index > 0) {
-                            const gapValue = mod.gapValue ?? 0;
-                            const gapUnit = mod.gapUnit ?? 'days';
-                            const safeGapValue = Math.max(0, gapValue);
+                // 1. Precompute cumulative scheduled timing synchronously
+                let cumulativeGapDays = 0;
+                const modulesWithTimings = sortedModules.map((mod, index) => {
+                    if (index === 0) {
+                        cumulativeGapDays = 0;
+                    } else {
+                        // gapUnit is ignored entirely, all gaps treated as DAYS only
+                        const safeGap = Math.max(0, mod.gapValue ?? 0);
+                        cumulativeGapDays += safeGap;
+                    }
+                    return {
+                        ...mod,
+                        cumulativeGapDays,
+                        scheduledDay: cumulativeGapDays + 1
+                    };
+                });
 
-                            const gap =
-                                gapUnit === 'weeks'
-                                    ? safeGapValue * 7
-                                    : safeGapValue;
-                            currentDay += gap;
-                        }
-
+                // 2. Compute progress + materials
+                const enrichedModules = await Promise.all(
+                    modulesWithTimings.map(async (mod) => {
                         const materials = await db.materials.findByModuleId(mod.id);
 
                         const progress = progressMap.get(mod.id);
                         const contentProgressPercent = progress?.contentProgressPercent ?? 0;
                         const assessmentPassed = progress?.assessmentPassed ?? false;
 
-                        // overall_progress formula:
-                        //   content half = contentProgressPercent * 0.5   (0–50)
-                        //   assessment half = assessmentPassed ? 50 : 0
-                        //   total = 0–100
                         const overallProgress = Math.round(
                             contentProgressPercent * 0.5 + (assessmentPassed ? 50 : 0)
                         );
 
-                        console.log("MODULE:", {
-                            id: mod.id,
-                            content: contentProgressPercent,
-                            passed: assessmentPassed,
-                            overall: overallProgress,
-                        });
-
                         return {
-                            mod,
-                            index,
-                            scheduledDay,
-                            cumulativeGapDays,
+                            ...mod,
+                            materials,
                             contentProgressPercent,
                             assessmentPassed,
-                            overallProgress,
-                            materials,
+                            overallProgress
                         };
                     })
                 );
 
-                // ── Pass 2: compute lock state per module ───────────────────────
-                const modulesWithSchedule = enriched.map((entry, index) => {
-                    const { mod, scheduledDay, cumulativeGapDays, contentProgressPercent, assessmentPassed, overallProgress, materials } = entry;
+                // 3. Compute lock state cleanly
+                const mode = subject.mode ?? 'sequential';
 
+                const assignedAt = assignment.assignedAt ? new Date(assignment.assignedAt) : new Date();
+                assignedAt.setUTCHours(0, 0, 0, 0);
+
+                const today = new Date();
+                today.setUTCHours(0, 0, 0, 0);
+
+                const finalModules = enrichedModules.map((mod, index) => {
                     let isLocked: boolean;
                     let unlockInDays: number | null = null;
-                    let unlockDate: string | null = null;
+                    let unlockDateObj: Date | null = null;
 
                     if (mode === 'scheduled') {
-                        // Unlock date = assignedAt + cumulative gap days (time-based only)
-                        const unlockDateObj = new Date(assignedAt);
-                        unlockDateObj.setUTCDate(unlockDateObj.getUTCDate() + cumulativeGapDays);
-
-                        unlockDate = unlockDateObj.toISOString().split('T')[0]; // YYYY-MM-DD
-                        const diffMs = unlockDateObj.getTime() - today.getTime();
-                        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                        unlockDateObj = new Date(assignedAt);
+                        unlockDateObj.setUTCDate(unlockDateObj.getUTCDate() + mod.cumulativeGapDays);
+                        unlockDateObj.setUTCHours(0, 0, 0, 0);
 
                         isLocked = today < unlockDateObj;
-                        unlockInDays = isLocked ? diffDays : 0;
-
-                        console.log('[scheduled unlock]', {
-                            moduleId: mod.id,
-                            mode,
-                            scheduledDay,
-                            unlockDate,
-                            isLocked,
-                            unlockInDays,
-                        });
+                        
+                        const diffMs = unlockDateObj.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                        unlockInDays = Math.max(0, diffDays);
                     } else {
-                        // SEQUENTIAL: first module always unlocked;
-                        // subsequent modules unlock only when previous module overallProgress >= 100
+                        // Sequential
                         if (index === 0) {
                             isLocked = false;
                         } else {
-                            const prev = enriched[index - 1];
+                            const prev = enrichedModules[index - 1];
                             isLocked = prev.overallProgress < 100;
                         }
-                        // Sequential modules don't have calendar-based unlock dates
-                        unlockInDays = null;
-                        unlockDate = null;
                     }
 
+                    const unlockDateIso = unlockDateObj ? unlockDateObj.toISOString() : null;
+
+                    console.log('[scheduled module]', {
+                        module: mod.module,
+                        cumulativeGapDays: mod.cumulativeGapDays,
+                        unlockDate: unlockDateIso,
+                        isLocked,
+                        unlockInDays,
+                    });
+
+                    // 4. Return normalized module objects
                     return {
                         id: mod.id,
                         module: mod.module,
-                        scheduledDay: currentDay,
+                        scheduledDay: mod.scheduledDay,
                         gapValue: mod.gapValue,
-                        gapUnit: mod.gapUnit,
-                        content_progress_percent: contentProgressPercent,
-                        assessment_passed: assessmentPassed,
-                        overall_progress: overallProgress,
-                        materials: materials.map(mat => ({
+                        gapUnit: 'days',
+                        content_progress_percent: mod.contentProgressPercent,
+                        assessment_passed: mod.assessmentPassed,
+                        overall_progress: mod.overallProgress,
+                        is_locked: isLocked,
+                        unlock_in_days: unlockInDays,
+                        unlock_date: unlockDateIso,
+                        materials: mod.materials.map(mat => ({
                             id: mat.id,
                             title: mat.title,
                             type: mat.type,
                             mediaUrl: mat.mediaUrl,
                         })),
                     };
-                })
-                );
+                });
 
-        return {
-            id: subject.id,
-            name: subject.name,
-            description: subject.description,
-            mode,
-            assignedAt: assignment.assignedAt,
-            modules: modulesWithSchedule,
-        };
-    })
+                return {
+                    id: subject.id,
+                    name: subject.name,
+                    description: subject.description,
+                    mode: subject.mode,
+                    assignedAt: assignment.assignedAt,
+                    modules: finalModules,
+                };
+            })
         );
 
-    const validSubjects = subjects.filter(Boolean);
+        const validSubjects = subjects.filter(Boolean);
 
-    return NextResponse.json(
-        { subjects: validSubjects },
-        { headers: CORS_HEADERS }
-    );
-} catch (error) {
-    console.error('[employees/me/subjects] Error:', error);
-    return NextResponse.json(
-        { error: 'Failed to fetch subjects' },
-        { status: 500, headers: CORS_HEADERS }
-    );
-}
+        return NextResponse.json(
+            { subjects: validSubjects },
+            { headers: CORS_HEADERS }
+        );
+    } catch (error) {
+        console.error('[employees/me/subjects] Error:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch subjects' },
+            { status: 500, headers: CORS_HEADERS }
+        );
+    }
 }
 
 export async function OPTIONS() {
