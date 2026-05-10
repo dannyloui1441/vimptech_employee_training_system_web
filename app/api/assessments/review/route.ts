@@ -1,0 +1,82 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { z } from 'zod';
+import { authGuard } from '@/lib/auth';
+
+const reviewBodySchema = z.object({
+    moduleId: z.string(),
+    // employeeId is now optional — prefer using the authenticated user's ID
+    employeeId: z.string().optional(),
+});
+
+// ─── POST /api/assessments/review ─────────────────────────────────────────────
+// Returns graded questions with the employee's selected answer and correct answer.
+// employeeId is derived from the authenticated user (token-based).
+// Optional employeeId in body is supported for backward compatibility.
+export async function POST(req: NextRequest) {
+    const guard = await authGuard(['Admin', 'Trainer', 'Employee'], req);
+    if ('response' in guard) return guard.response;
+
+    try {
+        const body = await req.json();
+        const parsed = reviewBodySchema.parse(body);
+
+        // Use authenticated user's ID (from token), fallback to body for backward compat
+        const employeeId = parsed.employeeId ?? guard.user.id;
+        const { moduleId } = parsed;
+
+        // Get the latest attempt for this employee + module
+        const attempts = await db.assessments.attempts.findByEmployeeAndModule(employeeId, moduleId);
+        if (attempts.length === 0) {
+            return NextResponse.json(
+                { error: 'No attempts found for this module' },
+                { status: 404 }
+            );
+        }
+
+        // Sort by submittedAt descending, take the latest
+        const latestAttempt = attempts.sort(
+            (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+        )[0];
+
+        // Load all questions for this module
+        const allQuestions = await db.assessments.questions.findByModule(moduleId);
+
+        // Only include questions that were part of this attempt (answered)
+        const answeredIds = Object.keys(latestAttempt.answers ?? {});
+        const questions = answeredIds.length > 0
+            ? allQuestions.filter(q => answeredIds.includes(q.id))
+            : allQuestions;
+
+        // Map each question with the user's selected answer and the correct answer
+        const result = questions.map((q) => ({
+            id: q.id,
+            text: q.text,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD,
+            selectedAnswer: latestAttempt.answers[q.id] ?? null,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+        }));
+
+        const total = result.length;
+        const correctCount = result.filter(q => q.selectedAnswer === q.correctAnswer).length;
+
+        return NextResponse.json({
+            questions: result,
+            score: correctCount,
+            total,
+            passed: latestAttempt.passed,
+            attemptNumber: latestAttempt.attemptNumber,
+            submittedAt: latestAttempt.submittedAt,
+        });
+    } catch (error) {
+        console.error('[assessments/review] Error:', error);
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({ error: error.errors }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Failed to fetch review' }, { status: 500 });
+    }
+}
