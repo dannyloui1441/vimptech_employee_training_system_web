@@ -58,13 +58,21 @@ export async function POST(req: NextRequest) {
 
         // Update module_progress only when the employee passes
         if (passed) {
-            await db.moduleProgress.upsert({
+            const existingProgress = await db.moduleProgress.findByUserAndModule(employeeId, moduleId);
+            
+            const upsertPayload: Parameters<typeof db.moduleProgress.upsert>[0] = {
                 userId: employeeId,
                 subjectId,
                 moduleId,
                 assessmentPassed: true,
                 assessmentPassedAt: new Date().toISOString(),
-            });
+            };
+
+            if (existingProgress?.contentProgressPercent === 100 && !existingProgress?.completedAt) {
+                upsertPayload.completedAt = new Date().toISOString();
+            }
+
+            await db.moduleProgress.upsert(upsertPayload);
         }
 
         return NextResponse.json({ score, passed, passingScore, attempt }, { status: 201 });

@@ -74,6 +74,14 @@ export async function POST(req: NextRequest) {
             upsertPayload.contentCompletedAt = new Date().toISOString();
         }
 
+        if (!existing) {
+            upsertPayload.startedAt = new Date().toISOString();
+        }
+
+        if (finalProgress === 100 && existing?.assessmentPassed && !existing?.completedAt) {
+            upsertPayload.completedAt = new Date().toISOString();
+        }
+
         await db.moduleProgress.upsert(upsertPayload);
 
         return NextResponse.json({ success: true }, { headers: CORS_HEADERS });

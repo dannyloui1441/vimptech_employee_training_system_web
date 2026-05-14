@@ -223,6 +223,8 @@ function mapModuleProgress(row: any): ModuleProgress {
     contentCompletedAt: row.content_completed_at ?? null,
     assessmentPassedAt: row.assessment_passed_at ?? null,
     updatedAt: row.updated_at,
+    startedAt: row.started_at ?? null,
+    completedAt: row.completed_at ?? null,
   };
 }
 
@@ -698,6 +700,8 @@ export const db = {
       assessmentPassed?: boolean;
       contentCompletedAt?: string | null;
       assessmentPassedAt?: string | null;
+      startedAt?: string | null;
+      completedAt?: string | null;
     }): Promise<ModuleProgress> {
       const now = new Date().toISOString();
 
@@ -724,6 +728,12 @@ export const db = {
         }
         if (data.assessmentPassedAt !== undefined) {
           updatePayload.assessment_passed_at = data.assessmentPassedAt;
+        }
+        if (data.startedAt !== undefined) {
+          updatePayload.started_at = data.startedAt;
+        }
+        if (data.completedAt !== undefined) {
+          updatePayload.completed_at = data.completedAt;
         }
 
         console.log('[moduleProgress.upsert] UPDATE existing row', {
@@ -754,6 +764,8 @@ export const db = {
         assessment_passed: data.assessmentPassed ?? false,
         content_completed_at: data.contentCompletedAt ?? null,
         assessment_passed_at: data.assessmentPassedAt ?? null,
+        started_at: data.startedAt ?? null,
+        completed_at: data.completedAt ?? null,
         updated_at: now,
       };
 

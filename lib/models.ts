@@ -138,4 +138,6 @@ export interface ModuleProgress {
   contentCompletedAt: string | null;
   assessmentPassedAt: string | null;
   updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
 }
