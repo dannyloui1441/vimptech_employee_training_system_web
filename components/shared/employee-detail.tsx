@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Copy, Check, Plus, BookOpen, Calendar, Activity, Layers } from "lucide-react"
+import { ArrowLeft, Copy, Check, Plus, BookOpen, Calendar, Activity, Layers, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -190,7 +190,31 @@ export function EmployeeDetail({
                 </CardContent>
             </Card>
 
-            {/* ── SECTION 2 — Assigned Subjects (cards) — only for Employees ── */}
+            {/* ── SECTION 2 — Analytics Access ─────────────────────────────── */}
+            {user.role === 'Employee' && (
+                <Card className="bg-primary/5 border-primary/20 shadow-sm">
+                    <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+                        <div className="flex items-center gap-4 text-center sm:text-left">
+                            <div className="bg-primary/10 p-3 rounded-full shrink-0">
+                                <BarChart3 className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg">Performance Analytics</h3>
+                                <p className="text-sm text-muted-foreground">View detailed metrics, assessment history, and training progress for this employee.</p>
+                            </div>
+                        </div>
+                        <Button 
+                            className="w-full sm:w-auto shrink-0 gap-2"
+                            onClick={() => router.push(viewerRole === 'Admin' ? `/admin/analytics/employees/${user.id}` : `/trainer/analytics/employees/${user.id}`)}
+                        >
+                            <BarChart3 className="h-4 w-4" />
+                            View Analytics
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ── SECTION 3 — Assigned Subjects (cards) — only for Employees ── */}
             {user.role === 'Employee' && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">

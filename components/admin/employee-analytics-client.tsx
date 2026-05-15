@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -179,6 +180,11 @@ export function EmployeeAnalyticsClient({
     basePath = "/admin/analytics",
 }: EmployeeAnalyticsClientProps) {
     const router = useRouter()
+    const [modulesExpanded, setModulesExpanded] = useState(false)
+    const [assessmentsExpanded, setAssessmentsExpanded] = useState(false)
+
+    const visibleModules = modulesExpanded ? modules : modules.slice(0, 5)
+    const visibleAssessments = assessmentsExpanded ? assessments : assessments.slice(0, 5)
 
     const initials = employee.name
         .split(" ")
@@ -431,7 +437,7 @@ export function EmployeeAnalyticsClient({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            modules.map((mod) => (
+                            visibleModules.map((mod) => (
                                 <TableRow
                                     key={mod.moduleId}
                                     className="hover:bg-secondary/20 transition-colors"
@@ -488,6 +494,18 @@ export function EmployeeAnalyticsClient({
                         )}
                     </TableBody>
                 </Table>
+                {modules.length > 5 && (
+                    <div className="p-3 border-t border-border flex justify-center bg-secondary/10">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setModulesExpanded(!modulesExpanded)}
+                        >
+                            {modulesExpanded ? "Show Less" : "Show More"}
+                        </Button>
+                    </div>
+                )}
             </Card>
 
             {/* ── Assessment History ───────────────────────────────────── */}
@@ -528,7 +546,7 @@ export function EmployeeAnalyticsClient({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            assessments.map((att) => (
+                            visibleAssessments.map((att) => (
                                 <TableRow
                                     key={att.assessmentId}
                                     className="hover:bg-secondary/20 transition-colors"
@@ -567,6 +585,18 @@ export function EmployeeAnalyticsClient({
                         )}
                     </TableBody>
                 </Table>
+                {assessments.length > 5 && (
+                    <div className="p-3 border-t border-border flex justify-center bg-secondary/10">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setAssessmentsExpanded(!assessmentsExpanded)}
+                        >
+                            {assessmentsExpanded ? "Show Less" : "Show More"}
+                        </Button>
+                    </div>
+                )}
             </Card>
         </div>
     )
