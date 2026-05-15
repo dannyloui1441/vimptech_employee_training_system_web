@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, BookOpen, LogOut, GraduationCap, Users, ClipboardList } from "lucide-react"
+import { LayoutDashboard, BookOpen, LogOut, GraduationCap, Users, ClipboardList, BarChart3 } from "lucide-react"
 
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/trainer/dashboard" },
     { icon: BookOpen, label: "My Subjects", href: "/trainer/subjects" },
     { icon: ClipboardList, label: "Assessment", href: "/trainer/assessment" },
     { icon: Users, label: "My Employees", href: "/trainer/employees" },
+    { icon: BarChart3, label: "Analytics", href: "/trainer/analytics" },
 ]
 
 

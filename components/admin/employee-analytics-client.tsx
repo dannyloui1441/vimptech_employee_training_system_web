@@ -80,6 +80,8 @@ interface EmployeeAnalyticsClientProps {
     subjects: SubjectAnalytics[]
     modules: ModuleHistory[]
     assessments: AssessmentHistory[]
+    /** Route prefix — "/admin/analytics" or "/trainer/analytics" */
+    basePath?: string
 }
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
@@ -174,6 +176,7 @@ export function EmployeeAnalyticsClient({
     subjects,
     modules,
     assessments,
+    basePath = "/admin/analytics",
 }: EmployeeAnalyticsClientProps) {
     const router = useRouter()
 
@@ -224,7 +227,7 @@ export function EmployeeAnalyticsClient({
                         variant="ghost"
                         size="sm"
                         className="gap-1.5"
-                        onClick={() => router.push("/admin/analytics")}
+                        onClick={() => router.push(basePath)}
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back

@@ -53,6 +53,8 @@ interface EmployeeAnalytics {
 interface AnalyticsDashboardClientProps {
     overview: AnalyticsOverview
     employees: EmployeeAnalytics[]
+    /** Route prefix — "/admin/analytics" or "/trainer/analytics" */
+    basePath?: string
 }
 
 // ─── Date formatter ──────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ function getScoreBadgeClass(score: number): string {
 export function AnalyticsDashboardClient({
     overview,
     employees,
+    basePath = "/admin/analytics",
 }: AnalyticsDashboardClientProps) {
     const router = useRouter()
     const [search, setSearch] = useState("")
@@ -317,7 +320,7 @@ export function AnalyticsDashboardClient({
                                                 className="gap-1.5 text-primary hover:text-primary"
                                                 onClick={() =>
                                                     router.push(
-                                                        `/admin/analytics/employees/${emp.id}`
+                                                        `${basePath}/employees/${emp.id}`
                                                     )
                                                 }
                                             >
