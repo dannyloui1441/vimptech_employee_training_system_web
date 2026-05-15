@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
+import { cookies } from "next/headers"
 import { db } from "@/lib/db"
 import { AnalyticsDashboardClient } from "@/components/admin/analytics-dashboard-client"
 import { buildOverview, buildEmployeeRow } from "@/lib/analytics"
@@ -7,15 +8,27 @@ import { buildOverview, buildEmployeeRow } from "@/lib/analytics"
 export const dynamic = 'force-dynamic'
 
 export default async function TrainerAnalyticsPage() {
-    const user = await getCurrentUser()
+    // ── Cookie-forwarding auth (same pattern as trainer layout) ────────────
+    const cookieStore = await cookies()
+    const tokenCookie = cookieStore.get('token')
+    let req: Request | undefined
+    if (tokenCookie?.value) {
+        req = new Request('http://localhost', {
+            headers: { cookie: `token=${tokenCookie.value}` },
+        })
+    }
+
+    const user = await getCurrentUser(req, { allowFallback: true })
     if (!user) redirect('/login')
     if (user.role !== 'Trainer' && user.role !== 'Admin') redirect('/login')
 
-    // ── Determine trainer scope ───────────────────────────────────────────
+    // ── Determine trainer scope (same logic as /api/trainer/employees) ─────
     const allSubjects = await db.subjects.findAll()
-    const trainerSubjectIds = allSubjects
-        .filter(s => s.assignedTrainerIds.includes(user.id))
-        .map(s => s.id)
+    const trainerSubjects = user.role === 'Trainer'
+        ? allSubjects.filter(s => s.assignedTrainerIds.includes(user.id))
+        : allSubjects
+
+    const trainerSubjectIds = trainerSubjects.map(s => s.id)
 
     if (trainerSubjectIds.length === 0) {
         return (

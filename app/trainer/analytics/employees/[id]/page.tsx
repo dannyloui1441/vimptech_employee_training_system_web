@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
+import { cookies } from "next/headers"
 import { db } from "@/lib/db"
 import { EmployeeAnalyticsClient } from "@/components/admin/employee-analytics-client"
 import { safeAvg, computeAvgCompletionTimeHours, computeLastActivity } from "@/lib/analytics"
@@ -11,7 +12,17 @@ export default async function TrainerEmployeeAnalyticsPage({
 }: {
     params: Promise<{ id: string }>
 }) {
-    const user = await getCurrentUser()
+    // ── Cookie-forwarding auth (same pattern as trainer layout) ────────────
+    const cookieStore = await cookies()
+    const tokenCookie = cookieStore.get('token')
+    let req: Request | undefined
+    if (tokenCookie?.value) {
+        req = new Request('http://localhost', {
+            headers: { cookie: `token=${tokenCookie.value}` },
+        })
+    }
+
+    const user = await getCurrentUser(req, { allowFallback: true })
     if (!user) redirect('/login')
     if (user.role !== 'Trainer' && user.role !== 'Admin') redirect('/login')
 
@@ -21,11 +32,11 @@ export default async function TrainerEmployeeAnalyticsPage({
     const employee = await db.users.findById(employeeId)
     if (!employee || employee.role !== 'Employee') notFound()
 
-    // ── Verify trainer scope ──────────────────────────────────────────────
+    // ── Verify trainer scope (same logic as /api/trainer/employees) ────────
     const allSubjects = await db.subjects.findAll()
-    const trainerSubjectIds = new Set(
-        allSubjects.filter(s => s.assignedTrainerIds.includes(user.id)).map(s => s.id)
-    )
+    const trainerSubjectIds = user.role === 'Trainer'
+        ? new Set(allSubjects.filter(s => s.assignedTrainerIds.includes(user.id)).map(s => s.id))
+        : new Set(allSubjects.map(s => s.id))
 
     const employeeAssignments = await db.assignments.getByEmployee(employeeId)
     const scopedAssignments = employeeAssignments.filter(

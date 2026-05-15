@@ -1,22 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { authGuard } from '@/lib/auth';
-import { buildOverview, buildEmployeeRow } from '@/lib/analytics';
+import { buildOverview } from '@/lib/analytics';
 
 // ─── GET /api/trainer/analytics/overview ──────────────────────────────────────
 // Trainer-scoped analytics overview. Only includes employees assigned to
 // subjects the trainer manages.
-export async function GET(req: NextRequest) {
-    const guard = await authGuard(['Trainer'], req);
+export async function GET() {
+    const guard = await authGuard(['Admin', 'Trainer']);
     if ('response' in guard) return guard.response;
-    const trainerId = guard.user.id;
+    const viewer = guard.user;
 
     try {
-        // ── Determine trainer scope ───────────────────────────────────────
+        // ── Determine trainer scope (same as /api/trainer/employees) ───────
         const allSubjects = await db.subjects.findAll();
-        const trainerSubjectIds = allSubjects
-            .filter(s => s.assignedTrainerIds.includes(trainerId))
-            .map(s => s.id);
+        const trainerSubjects = viewer.role === 'Trainer'
+            ? allSubjects.filter(s => s.assignedTrainerIds.includes(viewer.id))
+            : allSubjects;
+        const trainerSubjectIds = trainerSubjects.map(s => s.id);
 
         if (trainerSubjectIds.length === 0) {
             return NextResponse.json({

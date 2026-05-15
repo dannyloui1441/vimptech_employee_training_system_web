@@ -7,12 +7,12 @@ import { safeAvg, computeAvgCompletionTimeHours, computeLastActivity } from '@/l
 // Trainer-scoped employee detail analytics.
 // Returns data ONLY if the employee is assigned to a subject the trainer manages.
 export async function GET(
-    req: NextRequest,
+    _req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const guard = await authGuard(['Trainer'], req);
+    const guard = await authGuard(['Admin', 'Trainer']);
     if ('response' in guard) return guard.response;
-    const trainerId = guard.user.id;
+    const viewer = guard.user;
 
     const { id: employeeId } = await params;
 
@@ -23,11 +23,11 @@ export async function GET(
             return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
         }
 
-        // ── Verify trainer scope ──────────────────────────────────────────
+        // ── Verify trainer scope (same as /api/trainer/employees) ──────────
         const allSubjects = await db.subjects.findAll();
-        const trainerSubjectIds = new Set(
-            allSubjects.filter(s => s.assignedTrainerIds.includes(trainerId)).map(s => s.id)
-        );
+        const trainerSubjectIds = viewer.role === 'Trainer'
+            ? new Set(allSubjects.filter(s => s.assignedTrainerIds.includes(viewer.id)).map(s => s.id))
+            : new Set(allSubjects.map(s => s.id));
 
         const employeeAssignments = await db.assignments.getByEmployee(employeeId);
         const scopedAssignments = employeeAssignments.filter(
