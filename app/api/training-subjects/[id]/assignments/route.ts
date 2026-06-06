@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { authGuard } from '@/lib/auth';
+import { notifyTrainingAssigned } from '@/lib/notifications';
 
 const assignSchema = z.object({
     employeeId: z.string().min(1),
@@ -81,6 +82,12 @@ export async function POST(
         }
 
         const assignment = await db.assignments.assign(employeeId, subjectId);
+
+        // Dispatch in-app notification (fire-and-forget)
+        if (!('error' in access)) {
+            notifyTrainingAssigned(employeeId, subjectId, access.subject.name).catch(() => {});
+        }
+
         return NextResponse.json(assignment, { status: 201 });
     } catch (error) {
         if (error instanceof z.ZodError) {

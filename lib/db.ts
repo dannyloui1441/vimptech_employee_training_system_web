@@ -16,6 +16,7 @@ import type {
   AssessmentAttempt,
   ModuleAssessmentSettings,
   ModuleProgress,
+  AppNotification,
 } from './models';
 
 // ─── Supabase client (service role — full access, server-side only) ──────────
@@ -225,6 +226,21 @@ function mapModuleProgress(row: any): ModuleProgress {
     updatedAt: row.updated_at,
     startedAt: row.started_at ?? null,
     completedAt: row.completed_at ?? null,
+  };
+}
+
+function mapNotification(row: any): AppNotification {
+  return {
+    id: row.id,
+    recipientId: row.recipient_id,
+    title: row.title,
+    message: row.message,
+    type: row.type,
+    eventType: row.event_type,
+    metadata: row.metadata ?? {},
+    isRead: row.is_read ?? false,
+    createdAt: row.created_at,
+    readAt: row.read_at ?? null,
   };
 }
 
@@ -803,6 +819,113 @@ export const db = {
         .eq('user_id', userId);
       if (error) throw error;
       return (data ?? []).map(mapModuleProgress);
+    },
+  },
+
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  notifications: {
+    async create(notification: {
+      recipientId: string;
+      title: string;
+      message: string;
+      type: AppNotification['type'];
+      eventType: AppNotification['eventType'];
+      metadata?: Record<string, any>;
+    }): Promise<AppNotification> {
+      const { data, error } = await supabase.from('notifications').insert({
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        recipient_id: notification.recipientId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        event_type: notification.eventType,
+        metadata: notification.metadata ?? {},
+        is_read: false,
+      }).select().single();
+      if (error) throw error;
+      return mapNotification(data);
+    },
+
+    async createMany(notifications: Array<{
+      recipientId: string;
+      title: string;
+      message: string;
+      type: AppNotification['type'];
+      eventType: AppNotification['eventType'];
+      metadata?: Record<string, any>;
+    }>): Promise<number> {
+      if (notifications.length === 0) return 0;
+      const rows = notifications.map((n, i) => ({
+        id: `notif-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
+        recipient_id: n.recipientId,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        event_type: n.eventType,
+        metadata: n.metadata ?? {},
+        is_read: false,
+      }));
+      const { error } = await supabase.from('notifications').insert(rows);
+      if (error) throw error;
+      return rows.length;
+    },
+
+    async findByRecipient(recipientId: string, limit = 50): Promise<AppNotification[]> {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', recipientId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map(mapNotification);
+    },
+
+    async getUnreadCount(recipientId: string): Promise<number> {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', recipientId)
+        .eq('is_read', false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+
+    async markAsRead(id: string, recipientId: string): Promise<AppNotification | null> {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('recipient_id', recipientId)
+        .select()
+        .single();
+      if (error) return null;
+      return mapNotification(data);
+    },
+
+    async exists(recipientId: string, eventType: string, metadataMatch: Record<string, string>): Promise<boolean> {
+      let query = supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', recipientId)
+        .eq('event_type', eventType);
+      for (const [key, value] of Object.entries(metadataMatch)) {
+        query = query.filter(`metadata->>${key}`, 'eq', value);
+      }
+      const { count, error } = await query;
+      if (error) return false;
+      return (count ?? 0) > 0;
+    },
+
+    async getManualHistory(limit = 50): Promise<AppNotification[]> {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'admin_manual')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map(mapNotification);
     },
   },
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
+import { notifyModuleUnlocked } from '@/lib/notifications';
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -99,6 +100,8 @@ export async function GET(req: Request) {
                 const today = new Date();
                 today.setUTCHours(0, 0, 0, 0);
 
+                const unlockNotifyPromises: Promise<void>[] = [];
+
                 const finalModules = enrichedModules.map((mod, index) => {
                     let isLocked: boolean;
                     let unlockInDays: number | null = null;
@@ -110,7 +113,7 @@ export async function GET(req: Request) {
                         unlockDateObj.setUTCHours(0, 0, 0, 0);
 
                         isLocked = today < unlockDateObj;
-                        
+
                         const diffMs = unlockDateObj.getTime() - today.getTime();
                         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                         unlockInDays = Math.max(0, diffDays);
@@ -124,15 +127,13 @@ export async function GET(req: Request) {
                         }
                     }
 
-                    const unlockDateIso = unlockDateObj ? unlockDateObj.toISOString() : null;
+                    if (!isLocked) {
+                        unlockNotifyPromises.push(
+                            notifyModuleUnlocked(employeeId, mod.id, mod.module, subject.id, subject.name)
+                        );
+                    }
 
-                    console.log('[scheduled module]', {
-                        module: mod.module,
-                        cumulativeGapDays: mod.cumulativeGapDays,
-                        unlockDate: unlockDateIso,
-                        isLocked,
-                        unlockInDays,
-                    });
+                    const unlockDateIso = unlockDateObj ? unlockDateObj.toISOString() : null;
 
                     // 4. Return normalized module objects
                     return {
@@ -155,6 +156,10 @@ export async function GET(req: Request) {
                         })),
                     };
                 });
+
+                if (unlockNotifyPromises.length > 0) {
+                    await Promise.all(unlockNotifyPromises);
+                }
 
                 return {
                     id: subject.id,

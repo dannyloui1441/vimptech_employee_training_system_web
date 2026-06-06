@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Menu, Search, ArrowLeftRight, LayoutDashboard, GraduationCap } from "lucide-react"
+import { Bell, Menu, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export function AdminHeader() {
@@ -37,31 +36,6 @@ export function AdminHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-
-          {/* ── Switch Panel dropdown ── */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 font-medium">
-                <ArrowLeftRight className="h-4 w-4" />
-                Switch Panel
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Navigate to</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer gap-2 font-medium text-primary" disabled>
-                <LayoutDashboard className="h-4 w-4" />
-                Admin Panel
-                <span className="ml-auto text-xs text-muted-foreground">current</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                <Link href="/trainer/dashboard">
-                  <GraduationCap className="h-4 w-4" />
-                  Trainer Panel
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* ── Notifications ── */}
           <DropdownMenu>

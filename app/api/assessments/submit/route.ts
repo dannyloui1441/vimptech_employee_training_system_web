@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { authGuard } from '@/lib/auth';
+import { notifyAssessmentPassed, checkAndNotifySubjectCompletion } from '@/lib/notifications';
 
 const submitSchema = z.object({
     moduleId: z.string(),
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
         // Update module_progress only when the employee passes
         if (passed) {
             const existingProgress = await db.moduleProgress.findByUserAndModule(employeeId, moduleId);
-            
+
             const upsertPayload: Parameters<typeof db.moduleProgress.upsert>[0] = {
                 userId: employeeId,
                 subjectId,
@@ -73,6 +74,13 @@ export async function POST(req: NextRequest) {
             }
 
             await db.moduleProgress.upsert(upsertPayload);
+
+            // Trigger notifications
+            const trainingModule = await db.modules.findById(moduleId);
+            const moduleNumber = trainingModule?.module ?? 0;
+
+            await notifyAssessmentPassed(employeeId, moduleId, moduleNumber, subjectId, score);
+            await checkAndNotifySubjectCompletion(employeeId, subjectId);
         }
 
         return NextResponse.json({ score, passed, passingScore, attempt }, { status: 201 });

@@ -141,3 +141,19 @@ export interface ModuleProgress {
   startedAt: string | null;
   completedAt: string | null;
 }
+
+// ============================================
+// IN-APP NOTIFICATION
+// ============================================
+export interface AppNotification {
+  id: string;
+  recipientId: string;
+  title: string;
+  message: string;
+  type: 'system_automatic' | 'admin_manual';
+  eventType: 'subject_assigned' | 'module_unlocked' | 'assessment_passed' | 'subject_completed' | 'general_broadcast';
+  metadata: Record<string, any>;
+  isRead: boolean;
+  createdAt: string;
+  readAt: string | null;
+}

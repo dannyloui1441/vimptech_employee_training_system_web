@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { checkAndNotifySubjectCompletion } from '@/lib/notifications';
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -83,6 +84,9 @@ export async function POST(req: NextRequest) {
         }
 
         await db.moduleProgress.upsert(upsertPayload);
+
+        // Check and notify if subject is completed
+        await checkAndNotifySubjectCompletion(userId, subjectId);
 
         return NextResponse.json({ success: true }, { headers: CORS_HEADERS });
 

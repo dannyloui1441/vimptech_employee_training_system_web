@@ -22,7 +22,7 @@ async function assertQuestionAccess(questionId: string, userId: string, role: st
         const module = await db.modules.findById(question.moduleId);
         if (!module) return { error: 'Module not found', status: 404 as const };
         const subject = await db.subjects.findById(module.subjectId);
-        if (!subject || !subject.assignedTrainerIds.includes(userId)) {
+         if (!subject || !subject.assignedTrainerIds.includes(userId)) {
             return { error: 'Forbidden', status: 403 as const };
         }
     }

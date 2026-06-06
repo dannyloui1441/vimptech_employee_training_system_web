@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { authGuard } from '@/lib/auth';
 import { z } from 'zod';
+import { notifyTrainingAssigned } from '@/lib/notifications';
 
 const assignSchema = z.object({
     subjectId: z.string().min(1),
@@ -58,6 +59,12 @@ export async function POST(
         }
 
         const assignment = await db.assignments.assign(employeeId, subjectId);
+
+        // Dispatch in-app notification
+        const subject = await db.subjects.findById(subjectId);
+        if (subject) {
+            notifyTrainingAssigned(employeeId, subjectId, subject.name).catch(() => {});
+        }
 
         const wasReactivated = existing?.status === 'paused';
         return NextResponse.json(

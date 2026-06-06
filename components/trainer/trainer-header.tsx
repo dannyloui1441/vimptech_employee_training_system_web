@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Menu, ArrowLeftRight, LayoutDashboard, GraduationCap } from "lucide-react"
+import { Bell, Menu, GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -11,7 +11,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
 
 export function TrainerHeader() {
     return (
@@ -29,31 +28,6 @@ export function TrainerHeader() {
                 </div>
 
                 <div className="flex items-center gap-3">
-
-                    {/* ── Switch Panel dropdown ── */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 font-medium">
-                                <ArrowLeftRight className="h-4 w-4" />
-                                Switch Panel
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">Navigate to</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                                <Link href="/admin/dashboard">
-                                    <LayoutDashboard className="h-4 w-4" />
-                                    Admin Panel
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer gap-2 font-medium text-amber-600" disabled>
-                                <GraduationCap className="h-4 w-4" />
-                                Trainer Panel
-                                <span className="ml-auto text-xs text-muted-foreground">current</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
 
                     {/* ── Notifications ── */}
                     <DropdownMenu>
