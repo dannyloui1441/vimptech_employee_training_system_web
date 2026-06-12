@@ -76,6 +76,8 @@ export async function GET(req: Request) {
                         const progress = progressMap.get(mod.id);
                         const contentProgressPercent = progress?.contentProgressPercent ?? 0;
                         const assessmentPassed = progress?.assessmentPassed ?? false;
+                        const startedAt = progress?.startedAt ?? null;
+                        const completedAt = progress?.completedAt ?? null;
 
                         const overallProgress = Math.round(
                             contentProgressPercent * 0.5 + (assessmentPassed ? 50 : 0)
@@ -86,7 +88,9 @@ export async function GET(req: Request) {
                             materials,
                             contentProgressPercent,
                             assessmentPassed,
-                            overallProgress
+                            overallProgress,
+                            startedAt,
+                            completedAt
                         };
                     })
                 );
@@ -148,6 +152,8 @@ export async function GET(req: Request) {
                         is_locked: isLocked,
                         unlock_in_days: unlockInDays,
                         unlock_date: unlockDateIso,
+                        started_at: mod.startedAt,
+                        completed_at: mod.completedAt,
                         materials: mod.materials.map(mat => ({
                             id: mat.id,
                             title: mat.title,

@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
             upsertPayload.contentCompletedAt = new Date().toISOString();
         }
 
-        if (!existing) {
+        if (!existing || !existing.startedAt) {
             upsertPayload.startedAt = new Date().toISOString();
         }
 
