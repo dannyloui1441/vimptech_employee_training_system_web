@@ -12,25 +12,32 @@ const _spaceMono = V0_Font_Space_Mono({ subsets: ['latin'], weight: ["400","700"
 const _sourceSerif_4 = V0_Font_Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"] })
 
 export const metadata: Metadata = {
-  title: "Training Admin - Employee Training System",
+  title: {
+    default: "VimpTech Training Hub",
+    template: "%s | VimpTech Training Hub",
+  },
   description: "Automated Employee Training Management System",
   generator: "v0.app",
+  openGraph: {
+    title: "VimpTech Training Hub",
+    description: "Automated Employee Training Management System",
+    type: "website",
+    images: [
+      {
+        url: "/vimptech-logo.png",
+        width: 800,
+        height: 600,
+        alt: "VimpTech Training Hub Logo",
+      },
+    ],
+  },
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
+        url: "/vimptech-logo.png",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: "/vimptech-logo.png",
   },
 }
 

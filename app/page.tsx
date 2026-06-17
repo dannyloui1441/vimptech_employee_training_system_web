@@ -8,7 +8,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-cyan-100 to-pink-100 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-12">
-          <h1 className="font-bold text-5xl mb-4 text-balance">Employee Training System</h1>
+          <h1 className="font-bold text-5xl mb-4 text-balance">VimpTech Training Hub</h1>
           <p className="text-xl text-gray-700 font-medium">Select your panel to continue</p>
         </div>
 

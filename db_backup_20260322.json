@@ -342,7 +342,7 @@
   "notifications": [],
   "settings": {
     "general": {
-      "organizationName": "VimpTech Solutions",
+      "organizationName": "VimpTech Training Hub",
       "logo": null,
       "primaryColor": "#c10b0b",
       "secondaryColor": "#1e293b",
@@ -362,7 +362,7 @@
       }
     },
     "mobileApp": {
-      "appName": "Acme Learning",
+      "appName": "VimpTech Training Hub",
       "appVersion": "1.0.0",
       "minimumSupportedVersion": "1.0.0",
       "forceUpdate": false,

@@ -20,13 +20,15 @@ export function AdminSidebar() {
 
   return (
     <aside className="w-[280px] border-r border-border bg-card hidden md:flex flex-col">
-      <div className="p-6 border-b border-border flex items-center gap-2">
-        <div className="bg-primary/10 p-2 rounded-lg">
-          <GraduationCap className="h-6 w-6 text-primary" />
-        </div>
+      <div className="p-5 border-b border-border flex items-center gap-3">
+        <img
+          src="/vimptech-logo.png"
+          alt="VimpTech Logo"
+          className="h-8 w-auto object-contain"
+        />
         <div>
-          <h2 className="font-semibold text-lg text-foreground tracking-tight">Training Admin</h2>
-          <p className="text-xs text-muted-foreground">Enterprise Portal</p>
+          <h2 className="font-semibold text-sm text-foreground tracking-tight leading-tight">VimpTech Training Hub</h2>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">Admin Portal</p>
         </div>
       </div>
 

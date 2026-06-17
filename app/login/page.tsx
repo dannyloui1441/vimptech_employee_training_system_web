@@ -65,9 +65,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / Icon */}
         <div className="flex justify-center mb-8">
-          <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg">
-            <Shield className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img
+            src="/vimptech-logo.png"
+            alt="VimpTech Training Hub Logo"
+            className="h-20 w-auto object-contain"
+          />
         </div>
 
         <Card className="border shadow-xl">
@@ -76,7 +78,7 @@ export default function LoginPage() {
               Management Login
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Sign in to the Training Management System
+              Sign in to the VimpTech Training Hub
             </p>
           </CardHeader>
 
